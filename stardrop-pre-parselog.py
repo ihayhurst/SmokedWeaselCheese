@@ -32,7 +32,7 @@ def cmd_args(args=None):
     parser = argparse.ArgumentParser("Prepares flexlm log for datamining.")
 
     parser.add_argument('filename',
-                    help='path/filename of gzipped logfile to file to parse')
+                    help='path/filename of logfile to file to parse')
 
     parser.add_argument('-s', '--start',  dest='start',
                     help='Start date  of the log YYYY-MM-DD')
@@ -59,9 +59,9 @@ def main(args=None):
         
         #[print(i) for i in lines_we_keep]
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            df = df.loc[df['Action'] == 'License_refused']
+            #df = df.loc[df['Action'] == 'License_refused']
             print(df)
-            #print(df.User.unique())
+            print(df.User.unique())
 
 
     sys.exit(1)
