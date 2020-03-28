@@ -56,13 +56,18 @@ def main(args=None):
         original_log = f.readlines()
         lines_we_keep = list(log_parse(original_log))
         df = pd.DataFrame.from_records(lines_we_keep, columns=['User','Action','Number', 'Date'])
+        df['Date']  = pd.to_datetime(df['Date'])
         
         #[print(i) for i in lines_we_keep]
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             #df = df.loc[df['Action'] == 'License_refused']
-            print(df)
-            print(df.User.unique())
+            # Set index
+            df = df.set_index(df['Date'])
 
+            # Select observations between two datetimes
+            print(df.loc['2020-02-01 01:00:00':'2020-03-01 04:00:00'])
+            #print(df)
+            print(df.User.unique())
 
     sys.exit(1)
 
