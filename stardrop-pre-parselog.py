@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import re, datetime, argparse, sys
+import re, datetime, argparse, sys, json
+import functools
 import pandas as pd
+#import ADlookup as ad
 
 class Reader(object):
 
@@ -27,12 +29,23 @@ def log_parse(original_log):
             continue
 
         yield data
+@functools.lru_cache(maxsize=128, typed=False)
+def simpleUser (uid):
+    test1 = ad.AD()
+    try:
+        identity = test1.fetch(f'(sAMAccountName={uid})', 'displayName' )
+    except IndexError:
+        return('User Not Found')
+    identity = json.loads(identity)
+    identity = identity["attributes"]["displayName"][0]
+    return identity
+
 
 def cmd_args(args=None):
     parser = argparse.ArgumentParser("Prepares flexlm log for datamining.")
 
     parser.add_argument('filename',
-                    help='path/filename of logfile to file to parse')
+                    help='path/filename of gzipped logfile to file to parse')
 
     parser.add_argument('-s', '--start',  dest='start',
                     help='Start date  of the log YYYY-MM-DD')
@@ -62,12 +75,37 @@ def main(args=None):
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             #df = df.loc[df['Action'] == 'License_refused']
             # Set index
-            df = df.set_index(df['Date'])
+            pass
 
-            # Select observations between two datetimes
-            print(df.loc['2020-02-01 01:00:00':'2020-03-01 04:00:00'])
-            #print(df)
-            print(df.User.unique())
+        df = df.set_index(df['Date'])
+
+        # Select observations between two datetimes
+        df_sub=(df.loc['2020-04-09 00:00:00':'2020-04-09 19:00:00'])
+        # print(df.loc['2020-04-09 01:00:00':'2020-04-09 18:00:00'])
+        print(df_sub)
+        print(df_sub.User.unique())
+        df_sub_out = df_sub[df_sub['Action'] == 'License_granted']
+        df_sub_in = df_sub[df_sub['Action'] == 'License_released']
+        #print(df_sub_out)
+        #print(df_sub_in)
+
+        #Create an events table: For every checkout find a later checkin and calculate the loan duration
+        events = pd.DataFrame(columns=['Date', 'Duration', 'User'])
+        for index, row in df_sub_out.iterrows():
+            user = row['User']
+            OutTime = row['Date']
+            try:
+                key = ((df_sub_in.User == user) & (df_sub_in.index > index))
+                result = df_sub_in.loc[key]
+                events.loc[len(events), :] = (OutTime, (result['Date'].iloc[0]- OutTime), user)
+            except:
+                print (f'No MATCH! {row}')
+            else:
+                pass
+
+        events['Date'] = pd.to_datetime(events['Date'])
+        events['Duration'] = pd.to_timedelta(events['Duration'])
+        print(events)
 
     sys.exit(1)
 
