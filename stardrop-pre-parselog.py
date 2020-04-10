@@ -81,11 +81,14 @@ def main(args=None):
 
         # Select observations between two datetimes
         df_sub=(df.loc['2020-04-09 00:00:00':'2020-04-09 19:00:00'])
-        # print(df.loc['2020-04-09 01:00:00':'2020-04-09 18:00:00'])
-        print(df_sub)
+        #df_sub = df #or use the whole dataset
+        #print(df_sub)
+        #Unique users in tame range
         print(df_sub.User.unique())
+        #Split Checkout and checkin events
         df_sub_out = df_sub[df_sub['Action'] == 'License_granted']
         df_sub_in = df_sub[df_sub['Action'] == 'License_released']
+        #Perhaps create a table of refulasl here
         #print(df_sub_out)
         #print(df_sub_in)
 
@@ -95,7 +98,7 @@ def main(args=None):
             user = row['User']
             OutTime = row['Date']
             try:
-                key = ((df_sub_in.User == user) & (df_sub_in.index > index))
+                key = ((df_sub_in.User == user) & (df_sub_in.index >= index))
                 result = df_sub_in.loc[key]
                 events.loc[len(events), :] = (OutTime, (result['Date'].iloc[0]- OutTime), user)
             except:
