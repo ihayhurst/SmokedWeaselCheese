@@ -8,19 +8,8 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 from datetime import datetime
 
-#mpl.use('agg')
-import ADlookup as ad
-
-
-class Reader(object):
-
-    def __init__(self, g):
-        self.g = g
-    def read(self, n=0):
-        try:
-            return next(self.g)
-        except StopIteration:
-            return ''
+#Req for ldap3 wrapper to real names for userID inside corporate LAN
+#import ADlookup as ad
 
 
 def log_parse(original_log):
@@ -109,7 +98,7 @@ def main(args=None):
         #df_sub = df #or use the whole dataset
 
         #Enable for AD lookup of User's real name
-        df_sub['User'] = df_sub.apply(lambda row: simpleUser(row.User), axis= 1)
+        #df_sub['User'] = df_sub.apply(lambda row: simpleUser(row.User), axis= 1)
 
         #Unique users in time range
         print(df_sub.User.unique())
