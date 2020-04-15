@@ -9,7 +9,8 @@ from matplotlib.dates import date2num
 from datetime import datetime
 
 #mpl.use('agg')
-#import ADlookup as ad
+import ADlookup as ad
+
 
 class Reader(object):
 
@@ -20,6 +21,7 @@ class Reader(object):
             return next(self.g)
         except StopIteration:
             return ''
+
 
 def log_parse(original_log):
 
@@ -35,6 +37,22 @@ def log_parse(original_log):
             continue
 
         yield data
+
+
+def graph(events,df_sub_ref):
+    print(events)
+    fig, ax = plt.subplots(figsize=(16, 9))
+    ax.tick_params(axis='both', which='major', labelsize=10)
+    ax.tick_params(axis='both', which='minor', labelsize=8)
+    labels = events['User']
+    ax = ax.xaxis_date()
+    ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn), linewidth=10, color='blue')
+    ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
+    fig.autofmt_xdate()
+    plt.show()
+    return
+
+
 @functools.lru_cache(maxsize=128, typed=False)
 def simpleUser (uid):
     test1 = ad.AD()
@@ -59,6 +77,7 @@ def cmd_args(args=None):
     opt = parser.parse_args(args)
     return opt
 
+
 def main(args=None):
     opt = cmd_args(args)
     kwargs = {}
@@ -77,20 +96,24 @@ def main(args=None):
         df = pd.DataFrame.from_records(lines_we_keep, columns=['User','Action','Number', 'Date'])
         df['Date']  = pd.to_datetime(df['Date'])
         
-        #[print(i) for i in lines_we_keep]
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             #df = df.loc[df['Action'] == 'License_refused']
+
             # Set index
             pass
 
         df = df.set_index(df['Date'])
 
         # Select observations between two datetimes
-        df_sub=(df.loc['2020-04-09 07:00:00':'2020-04-09 19:00:00'])
+        df_sub=(df.loc['2020-03-14 07:00:00':'2020-04-14 10:00:00'])
         #df_sub = df #or use the whole dataset
+
+        #Enable for AD lookup of User's real name
+        df_sub['User'] = df_sub.apply(lambda row: simpleUser(row.User), axis= 1)
 
         #Unique users in time range
         print(df_sub.User.unique())
+
         #Split Checkout and checkin events: record refusals too
         df_sub_out = df_sub[df_sub['Action'] == 'License_granted']
         df_sub_in = df_sub[df_sub['Action'] == 'License_released']
@@ -115,17 +138,6 @@ def main(args=None):
         events['Duration'] = pd.to_timedelta(events['Duration'])
         print(df_sub_ref)
         graph(events,df_sub_ref)
-
-def graph(events,df_sub_ref):
-    print(events)
-    fig, ax = plt.subplots(figsize=(12, 8))
-    labels = events['User']
-    ax = ax.xaxis_date()
-    ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn))
-    ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
-    fig.autofmt_xdate()
-    plt.show()
-    return
 
 
     sys.exit(1)
