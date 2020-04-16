@@ -94,8 +94,8 @@ def main(args=None):
         df = df.set_index(df['Date'])
 
         # Select observations between two datetimes
-        df_sub=(df.loc['2020-03-14 07:00:00':'2020-04-14 10:00:00'])
-        #df_sub = df #or use the whole dataset
+        #df_sub=(df.loc['2020-03-14 07:00:00':'2020-04-14 10:00:00'])
+        df_sub = df #or use the whole dataset
 
         #Enable for AD lookup of User's real name
         #df_sub['User'] = df_sub.apply(lambda row: simpleUser(row.User), axis= 1)
