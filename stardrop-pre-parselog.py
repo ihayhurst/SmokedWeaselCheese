@@ -24,7 +24,7 @@ def log_parse(original_log):
         data = re.split("#", line.strip('\n'))
         data[0] = data[0][12:]  # LOG:stuffffUSERNAME username occurs 12 chars
 
-        if [i for i in grabbag if(i in data[1])]:
+        if [i for i in grabbag if i in data[1]]:
             pass
         else:
             continue
@@ -44,7 +44,6 @@ def graph(events, df_sub_ref):
     ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
     fig.autofmt_xdate()
     plt.show()
-    return
 
 
 @functools.lru_cache(maxsize=128, typed=False)
@@ -53,7 +52,7 @@ def simpleUser(uid):
     try:
         identity = test1.fetch(f'(sAMAccountName={uid})', 'displayName')
     except IndexError:
-        return('User Not Found')
+        return 'User Not Found'
     identity = json.loads(identity)
     identity = identity["attributes"]["displayName"][0]
     return identity
@@ -65,8 +64,8 @@ def cmd_args(args=None):
     parser.add_argument('filename',
                         help='path/filename of logfile to file to parse')
 
-    parser.add_argument('-s', '--start',  dest='start',
-                        help='Start date  of the log YYYY-MM-DD')
+    parser.add_argument('-s', '--start', dest='start',
+                        help='Start date of the log YYYY-MM-DD')
 
     opt = parser.parse_args(args)
     return opt
@@ -76,11 +75,11 @@ def main(args=None):
     opt = cmd_args(args)
     kwargs = {}
 
-    if (opt.start):
+    if opt.start:
         current_date = opt.start
         kwargs = {'start': current_date}
 
-    if (opt.filename):
+    if opt.filename:
         outfile_name = opt.filename+"-min"
 
     with open(opt.filename, 'rt', encoding='utf-8', errors='ignore')as f:
@@ -99,7 +98,7 @@ def main(args=None):
         df_sub = df  # or use the whole dataset
 
         # Enable for AD lookup of User's real name
-        # df_sub['User'] = df_sub.apply(lambda row: simpleUser(row.User), axis= 1)
+        # df_sub.User = df_sub.apply(lambda row: simpleUser(row.User), axis= 1)
 
         # Unique users in time range
         print(df_sub.User.unique())
@@ -109,7 +108,7 @@ def main(args=None):
         df_sub_in = df_sub[df_sub['Action'] == 'License_released']
         df_sub_ref = df_sub[df_sub['Action'] == 'License_refused']
 
-        # Create events table: For every checkout get the checkin; calculate the loan duration
+        # events table: For every checkout get the checkin; calculate the loan duration
         events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User'])
         for index, row in df_sub_out.iterrows():
             user = row['User']
@@ -117,8 +116,9 @@ def main(args=None):
             try:
                 key = ((df_sub_in.User == user) & (df_sub_in.index >= index))
                 result = df_sub_in.loc[key]
-                events.loc[len(events), :] = (OutTime, (result['Date'].iloc[0]), (result['Date'].iloc[0] - OutTime),  user)
-            except:
+                events.loc[len(events), :] = (OutTime, (result.Date.iloc[0]),
+                                              (result.Date.iloc[0] - OutTime), user)
+            except IndexError:
                 print(f'No MATCH! {row}')
             else:
                 pass
