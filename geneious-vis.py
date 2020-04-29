@@ -11,12 +11,12 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 
 #import ADlookup as ad
-
+DT_FORMAT = '%Y-%m-%dT%H:%M'
 
 def log_parse(original_log, *args, **kwargs):
 
-    if kwargs.get('start'):
-        current_date = datetime.date.fromisoformat(kwargs.get('start'))
+    if kwargs.get('hint'):
+        current_date = datetime.date.fromisoformat(kwargs.get('hint'))
         for line in original_log:
             data = line.split()
             try:
@@ -76,28 +76,107 @@ def simpleUser(uid):
 
 
 def cmd_args(args=None):
-    parser = argparse.ArgumentParser("Prepares flexlm log for datamining.")
+    parser = argparse.ArgumentParser("Prepares license log for datamining.")
 
     parser.add_argument('filename',
                         help='path/filename of logfile to file to parse')
 
+    parser.add_argument('-i', '--hint', dest='hint',
+                        help='Hint start date of the log YYYY-MM-DD')
+
     parser.add_argument('-s', '--start', dest='start',
-                        help='Start date  of the log YYYY-MM-DD')
+                        help='Start date YYYY-MM-DDTHH:MM e.g 2020-03-23T13:24')
+    parser.add_argument('-e', '--end', dest='end',
+                        help='End   date YYYY-MM-DDTHH:MM')
+    parser.add_argument('-d', '--dur', dest='dur',
+                        help='Duration: Hours, Days, Weeks,  e.g. 2W for 2 weeks')
 
     opt = parser.parse_args(args)
+
     return opt
+
+
+def parse_duration(duration):
+    hours = datetime.timedelta(hours=1)
+    days = datetime.timedelta(days=1)
+    weeks = datetime.timedelta(weeks=1)
+    fields = re.split(r'(\d+)', duration)
+    duration = int(fields[1])
+    if fields[2][:1].upper() == 'H':
+        duration_td = duration * hours
+    elif fields[2][:1].upper() == 'D':
+        duration_td = duration * days
+    elif fields[2][:1].upper() == 'W':
+        duration_td = duration * weeks
+    else:
+        raise ValueError
+
+    return duration_td
+
+
+def date_to_dt(datestring, FORMAT):
+    dateasdt = datetime.datetime.strptime(datestring, FORMAT)
+    return dateasdt
+
+
+def dt_to_date(dateasdt, FORMAT):
+    datestring = datetime.datetime.strftime(dateasdt, FORMAT)
+    return datestring
 
 
 def main(args=None):
     opt = cmd_args(args)
     kwargs = {}
 
-    if  opt.start:
-        current_date = opt.start
-        kwargs = {'start': current_date}
+    if opt.dur and opt.start and opt.end:  # Assume start and range ignore end
+        print("All three madness")  # Debug
+        print("Duration", opt.dur)
+        duration = parse_duration(opt.dur)
+        opt.end_dt = date_to_dt(opt.start, DT_FORMAT)+duration
+        opt.end = opt.end_dt.strftime(DT_FORMAT)
 
-    if opt.filename:
-        outfile_name = opt.filename+"-min"
+    if opt.dur and opt.start and not opt.end:  # Start and range
+        print("Start date and duration")  # Debug
+        print("Duration", opt.dur)
+        duration = parse_duration(opt.dur)
+        opt.end_dt = date_to_dt(opt.start, DT_FORMAT) + duration
+        opt.end = opt.end_dt.strftime(DT_FORMAT)
+
+    if opt.dur and not opt.start and opt.end:  # Range before enddate
+        print("End date and duration")  # Debug
+        duration = parse_duration(opt.dur)
+        opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
+        opt.start = opt.start_dt.strftime(DT_FORMAT)
+
+    if opt.dur and not opt.start and not opt.end:  # tailmode with range
+        print("End of log back by duratiion")  # Debug
+        duration = parse_duration(opt.dur)
+        opt.end_dt = datetime.datetime.now()
+        opt.end = dt_to_date(opt.end_dt, DT_FORMAT)
+        opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
+        opt.start = opt.start_dt.strftime(DT_FORMAT)
+
+    if not opt.dur and opt.start and opt.end:  # Date range
+        print("Start date and end date")  # Debug
+        if date_to_dt(opt.start, DT_FORMAT) > date_to_dt(opt.end, DT_FORMAT):  # End before start so swap
+            opt.start, opt.end = opt.end, opt.start
+
+    if not opt.dur and opt.start and not opt.end:  # Start Date only - from start date to end
+        print("Start Date to end of log ")  # Debug
+        opt.end_dt = datetime.datetime.now()
+        opt.end = opt.end_dt.strftime(DT_FORMAT)
+
+    if not opt.dur and not opt.start and opt.end:  # End Date only - from end date to start
+        print("End date back to the dawn of time (or the log at least) ")  # Debug
+        opt.start_dt = datetime.date(1970, 1, 1)
+        opt.start = opt.start_dt.strftime(DT_FORMAT)
+
+    if  opt.hint:
+        current_date = opt.hint
+        kwargs = {'hint': current_date}
+
+    if not opt.start:
+        kwargs = {'from_date': opt.start, 'to_date': opt.end, **kwargs}
 
     with open(opt.filename, 'rt', encoding='utf-8', errors='ignore')as f:
         original_log = f.readlines()
@@ -111,8 +190,10 @@ def main(args=None):
         df = df.set_index(df['Date'])
 
         # Select observations between two datetimes
-        #df_sub=(df.loc['2019-01-01 00:00:00':'2020-01-31 23:59:59'])
-        df_sub = df #or use the whole dataset
+        if opt.start:
+            df_sub=(df.loc[opt.start : opt.end])
+        else:
+            df_sub = df #or use the whole dataset
 
         #Enable for AD lookup of User's real name
         #df_sub['User'] = df_sub.apply(lambda row: simpleUser(row.User), axis=1)
