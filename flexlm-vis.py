@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import re, time, datetime, argparse, sys, json
+import re
+import argparse
+import sys
+import json
+import time
+import datetime
 import functools
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
-#from datetime import datetime
 
-#mpl.use('agg')
-import ADlookup as ad
+#import ADlookup as ad
+
 
 def log_parse(original_log, *args, **kwargs):
 
@@ -44,6 +48,7 @@ def log_parse(original_log, *args, **kwargs):
                 data = data.split(maxsplit=7)
             else:
                 continue
+
             yield data
 
 
@@ -77,7 +82,7 @@ def cmd_args(args=None):
     parser = argparse.ArgumentParser("Prepares flexlm log for datamining.")
 
     parser.add_argument('filename',
-                        help='path/filename of gzipped logfile to file to parse')
+                        help='path/filename of logfile to file to parse')
 
     parser.add_argument('-s', '--start', dest='start',
                         help='Start date  of the log YYYY-MM-DD')
@@ -96,7 +101,6 @@ def main(args=None):
 
     if opt.filename:
         outfile_name = opt.filename+"-min"
-        #print('Output file:',outfile_name)
 
     with open(opt.filename, 'rt', encoding='utf-8', errors='ignore')as f:
         original_log = f.readlines()
@@ -114,17 +118,17 @@ def main(args=None):
         df_sub = df #or use the whole dataset
 
         #Enable for AD lookup of User's real name
-        df_sub['User'] = df_sub.apply(lambda row: simpleUser(row.User), axis=1)
+        #df_sub['User'] = df_sub.apply(lambda row: simpleUser(row.User), axis=1)
 
-        #Unique users in time range
+        # Unique users in time range
         print(df_sub.User.unique())
 
-        #Split Checkout and checkin events: record refusals too
+        # Split Checkout and checkin events: record refusals too
         df_sub_out = df_sub[df_sub['Action'] == 'OUT:']
         df_sub_in = df_sub[df_sub['Action'] == 'IN:']
         df_sub_ref = df_sub[df_sub['Action'] == 'DENIED:']
 
-        #Create an events table: For every checkout find a later checkin and calculate the loan duration
+        # events table: For every checkout get checkin; calculate the loan duration
         events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Module', 'Duration', 'User'])
         t = time.process_time()
         for row in df_sub_out.itertuples():
@@ -139,7 +143,8 @@ def main(args=None):
             try:
                 key = ((df_sub_in.Module == module) & (df_sub_in.User == user) & (df_sub_in.index >= index))
                 result = df_sub_in.loc[key]
-                events.loc[len(events), :] = (OutTime, (result['Date'].iloc[0]), module, (result['Date'].iloc[0]- OutTime), user)
+                events.loc[len(events), :] = (OutTime, (result.Date.iloc[0]), module,
+                                              (result.Date.iloc[0] - OutTime), user)
             except IndexError:
                 print(f'No MATCH! {row}')
             else:

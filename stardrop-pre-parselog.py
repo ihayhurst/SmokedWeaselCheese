@@ -44,6 +44,7 @@ def graph(events, df_sub_ref):
     ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
     fig.autofmt_xdate()
     plt.show()
+    return
 
 
 @functools.lru_cache(maxsize=128, typed=False)
@@ -52,7 +53,8 @@ def simpleUser(uid):
     try:
         identity = test1.fetch(f'(sAMAccountName={uid})', 'displayName')
     except IndexError:
-        return 'User Not Found'
+        # User Not Found, return the original uid
+        return uid
     identity = json.loads(identity)
     identity = identity["attributes"]["displayName"][0]
     return identity
@@ -108,7 +110,7 @@ def main(args=None):
         df_sub_in = df_sub[df_sub['Action'] == 'License_released']
         df_sub_ref = df_sub[df_sub['Action'] == 'License_refused']
 
-        # events table: For every checkout get the checkin; calculate the loan duration
+        # events table: For every checkout get  checkin; calculate the loan duration
         events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User'])
         for index, row in df_sub_out.iterrows():
             user = row['User']
@@ -130,7 +132,6 @@ def main(args=None):
         graph(events, df_sub_ref)
 
     sys.exit(1)
-
 
 if __name__ == '__main__':
     try:
