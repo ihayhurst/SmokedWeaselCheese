@@ -10,7 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 
-#import ADlookup as ad
+import ADlookup as ad
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
 def log_parse(original_log, *args, **kwargs):
@@ -49,14 +49,15 @@ def log_parse(original_log, *args, **kwargs):
             yield data
 
 
-def graph(events, df_sub_ref):
-    fig, ax = plt.subplots(figsize=(16, 10))
+def graph(events, df_sub_ref, loans):
+    fig, ax  = plt.subplots(figsize=(16, 10))
     ax.tick_params(axis='both', which='major', labelsize=6)
     ax.tick_params(axis='both', which='minor', labelsize=6)
     labels = events['User']
     ax = ax.xaxis_date()
     ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn), linewidth=6, color='blue')
     ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
+    bx = loans.plot(style ='g', alpha=0.4)
     fig.autofmt_xdate()
     plt.show()
     return
@@ -148,6 +149,7 @@ def main(args=None):
         opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
         opt.start = opt.start_dt.strftime(DT_FORMAT)
 
+        # This won't return the full duration until we know the end date in our log
     if opt.dur and not opt.start and not opt.end:  # tailmode with range
         print("End of log back by duratiion")  # Debug
         duration = parse_duration(opt.dur)
@@ -155,6 +157,7 @@ def main(args=None):
         opt.end = dt_to_date(opt.end_dt, DT_FORMAT)
         opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
         opt.start = opt.start_dt.strftime(DT_FORMAT)
+        
 
     if not opt.dur and opt.start and opt.end:  # Date range
         print("Start date and end date")  # Debug
@@ -186,7 +189,6 @@ def main(args=None):
         df = pd.DataFrame.from_records(lines_we_keep, columns=columnsRead)
         df['Date'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
         df.drop([x for x in discard_cols], axis=1, inplace=True)
-
         df = df.set_index(df['Date'])
 
         # Select observations between two datetimes
@@ -196,7 +198,7 @@ def main(args=None):
             df_sub = df #or use the whole dataset
 
         #Enable for AD lookup of User's real name
-        #df_sub['User'] = df_sub.apply(lambda row: simpleUser(row.User), axis=1)
+        df_sub['User'] = df_sub.apply(lambda row: simpleUser(row.User), axis=1)
 
         # Unique users in time range
         print(df_sub.User.unique())
@@ -205,6 +207,14 @@ def main(args=None):
         df_sub_out = df_sub[df_sub['Action'] == 'OUT:']
         df_sub_in = df_sub[df_sub['Action'] == 'IN:']
         df_sub_ref = df_sub[df_sub['Action'] == 'DENIED:']
+
+        # Cumulative license loan tally
+        x = df_sub_out.Date.value_counts().sub(df_sub_in.Date.value_counts(), fill_value=0)
+        x.iloc[-1] = 0
+        loans = x.cumsum()
+        #r.to_csv('cumul.csv')
+        #loans = pd.read_csv('cumul.csv', index_col=0, header=None)
+        print(loans)
 
         # events table: For every checkout get checkin; calculate the loan duration
         events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User'])
@@ -224,8 +234,8 @@ def main(args=None):
         events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
         events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
         events['Duration'] = pd.to_timedelta(events['Duration'])
-        print(df_sub_ref)
-        graph(events, df_sub_ref)
+        #print(df_sub_ref)
+        graph(events, df_sub_ref, loans)
 
 
     sys.exit(1)
