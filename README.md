@@ -1,9 +1,9 @@
 # SmokedWeaselCheese
 Log parser as generator to Pandas Dataframe
-Visualise license checkouts, counts, denials etc. from several propriatory license systems debug logs
+Visualise license checkouts, counts, denials etc. from several propriatory license system debug logs
 
 Read the log file in Pass  to Parse, spit out a generator
-Read generator lines into dataframe, find checking events for each checkout, analyse, visualise
+Read generator lines into dataframe, find checkin events for each checkout, analyse, visualise
 
 * stardrop-vis.py for Log in the form of: 
 
