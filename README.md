@@ -27,14 +27,14 @@ Read generator lines into dataframe, find checking events for each checkout, ana
 
 > `usage: Prepares license log for datamining. [-h] [-i HINT] [-s START] [-e END] [-d DUR] filename`  
 
-> positional arguments:
-> filename              path/filename of logfile to file to parse
+> positional arguments:  
+> filename              path/filename of logfile to file to parse  
 
-> optional arguments:
->  -h, --help            show this help message and exit
->  -i HINT, --hint HINT  Hint start date of the log YYYY-MM-DD
->  -s START, --start START
->                        Start date YYYY-MM-DDTHH:MM e.g 2020-03-23T13:24
->  -e END, --end END     End date YYYY-MM-DDTHH:MM
->  -d DUR, --dur DUR     Duration: Hours, Days, Weeks, e.g. 2W for 2 weeks
+> optional arguments:  
+>  -h, --help            show this help message and exit  
+>  -i HINT, --hint HINT  Hint start date of the log YYYY-MM-DD  
+>  -s START, --start START  
+>                        Start date YYYY-MM-DDTHH:MM e.g 2020-03-23T13:24  
+>  -e END, --end END     End date YYYY-MM-DDTHH:MM  
+>  -d DUR, --dur DUR     Duration: Hours, Days, Weeks, e.g. 2W for 2 weeks  
 
