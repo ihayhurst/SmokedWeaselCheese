@@ -12,7 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 
-import ADlookup as ad
+# import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
@@ -31,11 +31,14 @@ def log_parse(original_log, **kwargs):
                 continue
 
             try:
-                if data[2] == "TIMESTAMP": # check whether date has changed - if so, then we'll use this for each subsequent line
+                #Do we have a TIMESTAMP, if we do and it's newer then use it
+                if data[2] == "TIMESTAMP":
                     new_date = datetime.datetime.strptime(data[3], "%m/%d/%Y").date()
-                    if new_date == current_date:  # if it hasn't changed then value of current_date is OK
+                    # if it hasn't changed then value of current_date is OK
+                    if new_date == current_date:
                         pass
-                    else:           # if it has changed, then that's the new value of current_date
+                    else:
+                        # if it has changed, then that's the new value of current_date
                         current_date = new_date
                         continue
             except IndexError:
@@ -52,6 +55,21 @@ def log_parse(original_log, **kwargs):
                 continue
 
             yield data
+
+
+def readfile_to_dataframe(**kwargs):
+    """read in file return datafrme"""
+    filename = kwargs.get('filename')
+    with open(filename, 'rt', encoding='utf-8', errors='ignore')as f:
+        original_log = f.readlines()
+        lines_we_keep = list(log_parse(original_log, **kwargs))
+        columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'User', 'Host', 'State']
+        discard_cols = ['Time', 'Product', 'Module', 'Host', 'State']
+        df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
+        df['Date'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
+        df.drop([x for x in discard_cols], axis=1, inplace=True)
+        df = df.set_index(df['Date'])
+    return df
 
 
 def graph(events, df_sub_ref, loans):
@@ -103,41 +121,9 @@ def cmd_args(args=None):
     return opt
 
 
-def parse_duration(duration):
-    """Parse duration Hours,Days or Weeks Return timedelta"""
-    hours = datetime.timedelta(hours=1)
-    days = datetime.timedelta(days=1)
-    weeks = datetime.timedelta(weeks=1)
-    fields = re.split(r'(\d+)', duration)
-    duration = int(fields[1])
-    if fields[2][:1].upper() == 'H':
-        duration_td = duration * hours
-    elif fields[2][:1].upper() == 'D':
-        duration_td = duration * days
-    elif fields[2][:1].upper() == 'W':
-        duration_td = duration * weeks
-    else:
-        raise ValueError
-
-    return duration_td
-
-
-def date_to_dt(datestring, FORMAT):
-    """Convert date string to datetime object"""
-    dateasdt = datetime.datetime.strptime(datestring, FORMAT)
-    return dateasdt
-
-
-def dt_to_date(dateasdt, FORMAT):
-    """Convert datetime object to datestring"""
-    datestring = datetime.datetime.strftime(dateasdt, FORMAT)
-    return datestring
-
-
-def main(args=None):
-    opt = cmd_args(args)
+def process_opts(opt):
     kwargs = {}
-
+    kwargs = {'filename': opt.filename, **kwargs}
     if opt.dur and opt.start and opt.end:
         # Assume start and range ignore end
         print("Duration", opt.dur)
@@ -186,65 +172,92 @@ def main(args=None):
     if opt.hint:
         # Hint is for timestamping log before first timestsmp
         current_date = opt.hint
-        kwargs = {'hint': current_date}
+        kwargs = {'hint': current_date, **kwargs}
 
     if not opt.start:
         kwargs = {'from_date': opt.start, 'to_date': opt.end, **kwargs}
 
-    with open(opt.filename, 'rt', encoding='utf-8', errors='ignore')as f:
-        original_log = f.readlines()
-        lines_we_keep = list(log_parse(original_log, **kwargs))
-        columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'User', 'Host', 'State']
-        discard_cols = ['Time', 'Product', 'Module', 'Host', 'State']
-        df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
-        df['Date'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
-        df.drop([x for x in discard_cols], axis=1, inplace=True)
-        df = df.set_index(df['Date'])
+    return kwargs
 
-        # Select observations between two datetimes
-        if opt.start:
-            df_sub = (df.loc[opt.start:opt.end])
+def parse_duration(duration):
+    """Parse duration Hours,Days or Weeks Return timedelta"""
+    hours = datetime.timedelta(hours=1)
+    days = datetime.timedelta(days=1)
+    weeks = datetime.timedelta(weeks=1)
+    fields = re.split(r'(\d+)', duration)
+    duration = int(fields[1])
+    if fields[2][:1].upper() == 'H':
+        duration_td = duration * hours
+    elif fields[2][:1].upper() == 'D':
+        duration_td = duration * days
+    elif fields[2][:1].upper() == 'W':
+        duration_td = duration * weeks
+    else:
+        raise ValueError
+
+    return duration_td
+
+
+def date_to_dt(datestring, FORMAT):
+    """Convert date string to datetime object"""
+    dateasdt = datetime.datetime.strptime(datestring, FORMAT)
+    return dateasdt
+
+
+def dt_to_date(dateasdt, FORMAT):
+    """Convert datetime object to datestring"""
+    datestring = datetime.datetime.strftime(dateasdt, FORMAT)
+    return datestring
+
+
+def main(args=None):
+    opt = cmd_args(args)
+    kwargs = process_opts(opt)
+    df = readfile_to_dataframe(**kwargs)
+
+    # Select observations between two datetimes
+    if opt.start:
+        df_sub = (df.loc[opt.start:opt.end])
+    else:
+        df_sub = df  # or use the whole dataset
+
+    # Enable for AD lookup of User's real name
+    #df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
+
+    # Unique users in time range
+    print(df_sub.User.unique())
+
+    # Split Checkout and checkin events: record refusals too
+    df_sub_out = df_sub[df_sub['Action'] == 'OUT:']
+    df_sub_in = df_sub[df_sub['Action'] == 'IN:']
+    df_sub_ref = df_sub[df_sub['Action'] == 'DENIED:']
+
+    # Cumulative license loan tally
+    x = df_sub_out.Date.value_counts().sub(df_sub_in.Date.value_counts(), fill_value=0)
+    x.iloc[-1] = 0
+    loans = x.cumsum()
+    print(loans)
+
+    # Events table: For every checkout get checkin; calculate the loan duration
+    events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User'])
+    for index, row in df_sub_out.iterrows():
+        user = row['User']
+        out_time = row['Date']
+        try:
+            key = ((df_sub_in.User == user) & (df_sub_in.index >= index))
+            result = df_sub_in.loc[key]
+            events.loc[len(events), :] = (out_time, (result.Date.iloc[0]),
+                                          (result.Date.iloc[0] - out_time), user)
+        except IndexError:
+            print(f'No MATCH! {row}')
         else:
-            df_sub = df  # or use the whole dataset
+            pass
 
-        # Enable for AD lookup of User's real name
-        df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
+    events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
+    events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
+    events['Duration'] = pd.to_timedelta(events['Duration'])
+    graph(events, df_sub_ref, loans)
 
-        # Unique users in time range
-        print(df_sub.User.unique())
-
-        # Split Checkout and checkin events: record refusals too
-        df_sub_out = df_sub[df_sub['Action'] == 'OUT:']
-        df_sub_in = df_sub[df_sub['Action'] == 'IN:']
-        df_sub_ref = df_sub[df_sub['Action'] == 'DENIED:']
-
-        # Cumulative license loan tally
-        x = df_sub_out.Date.value_counts().sub(df_sub_in.Date.value_counts(), fill_value=0)
-        x.iloc[-1] = 0
-        loans = x.cumsum()
-        print(loans)
-
-        # Events table: For every checkout get checkin; calculate the loan duration
-        events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User'])
-        for index, row in df_sub_out.iterrows():
-            user = row['User']
-            out_time = row['Date']
-            try:
-                key = ((df_sub_in.User == user) & (df_sub_in.index >= index))
-                result = df_sub_in.loc[key]
-                events.loc[len(events), :] = (out_time, (result.Date.iloc[0]),
-                                              (result.Date.iloc[0] - out_time), user)
-            except IndexError:
-                print(f'No MATCH! {row}')
-            else:
-                pass
-
-        events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
-        events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
-        events['Duration'] = pd.to_timedelta(events['Duration'])
-        graph(events, df_sub_ref, loans)
-
-    sys.exit(1)
 
 
 if __name__ == '__main__':
