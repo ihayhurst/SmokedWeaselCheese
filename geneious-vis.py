@@ -12,7 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 
-#import ADlookup as ad
+import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
@@ -99,7 +99,6 @@ def cmd_args(args=None):
                         help='Duration: Hours, Days, Weeks,  e.g. 2W for 2 weeks')
 
     opt = parser.parse_args(args)
-    print(opt)
 
     return opt
 
@@ -139,51 +138,53 @@ def main(args=None):
     opt = cmd_args(args)
     kwargs = {}
 
-    if opt.dur and opt.start and opt.end:  # Assume start and range ignore end
-        print("All three madness")  # Debug
+    if opt.dur and opt.start and opt.end:
+        # Assume start and range ignore end
         print("Duration", opt.dur)
         duration = parse_duration(opt.dur)
         opt.end_dt = date_to_dt(opt.start, DT_FORMAT)+duration
         opt.end = opt.end_dt.strftime(DT_FORMAT)
 
-    if opt.dur and opt.start and not opt.end:  # Start and range
-        print("Start date and duration")  # Debug
+    if opt.dur and opt.start and not opt.end:
+        # Start and range
         print("Duration", opt.dur)
         duration = parse_duration(opt.dur)
         opt.end_dt = date_to_dt(opt.start, DT_FORMAT) + duration
         opt.end = opt.end_dt.strftime(DT_FORMAT)
 
-    if opt.dur and not opt.start and opt.end:  # Range before enddate
-        print("End date and duration")  # Debug
+    if opt.dur and not opt.start and opt.end:
+        # Range before enddate
         duration = parse_duration(opt.dur)
         opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
         opt.start = opt.start_dt.strftime(DT_FORMAT)
 
         # This won't return the full duration until we know the end date in our log
-    if opt.dur and not opt.start and not opt.end:  # tailmode with range
-        print("End of log back by duratiion")  # Debug
+    if opt.dur and not opt.start and not opt.end:
+        # End of log back by duration
         duration = parse_duration(opt.dur)
         opt.end_dt = datetime.datetime.now()
         opt.end = dt_to_date(opt.end_dt, DT_FORMAT)
         opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
         opt.start = opt.start_dt.strftime(DT_FORMAT)
 
-    if not opt.dur and opt.start and opt.end:  # Date range
-        print("Start date and end date")  # Debug
-        if date_to_dt(opt.start, DT_FORMAT) > date_to_dt(opt.end, DT_FORMAT):  # End before start so swap
+    if not opt.dur and opt.start and opt.end:
+        # Date range
+        if date_to_dt(opt.start, DT_FORMAT) > date_to_dt(opt.end, DT_FORMAT):
+            # End before start so swap
             opt.start, opt.end = opt.end, opt.start
 
-    if not opt.dur and opt.start and not opt.end:  # Start Date only - from start date to end
-        print("Start Date to end of log ")  # Debug
+    if not opt.dur and opt.start and not opt.end:
+        # Start Date only - from start date to end
         opt.end_dt = datetime.datetime.now()
         opt.end = opt.end_dt.strftime(DT_FORMAT)
 
-    if not opt.dur and not opt.start and opt.end:  # End Date only - from end date to start
-        print("End date back to the dawn of time (or the log at least) ")  # Debug
+    if not opt.dur and not opt.start and opt.end:
+        # End Date only - from end date to start
         opt.start_dt = datetime.date(1970, 1, 1)
         opt.start = opt.start_dt.strftime(DT_FORMAT)
 
     if opt.hint:
+        # Hint is for timestamping log before first timestsmp
         current_date = opt.hint
         kwargs = {'hint': current_date}
 
@@ -207,7 +208,7 @@ def main(args=None):
             df_sub = df  # or use the whole dataset
 
         # Enable for AD lookup of User's real name
-        #df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
+        df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
         # Unique users in time range
         print(df_sub.User.unique())
@@ -223,7 +224,7 @@ def main(args=None):
         loans = x.cumsum()
         print(loans)
 
-        # events table: For every checkout get checkin; calculate the loan duration
+        # Events table: For every checkout get checkin; calculate the loan duration
         events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User'])
         for index, row in df_sub_out.iterrows():
             user = row['User']
