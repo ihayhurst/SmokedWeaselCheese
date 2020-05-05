@@ -217,7 +217,7 @@ def main(args=None):
 
     # Select observations between two datetimes
     if opt.start:
-        df_sub = (df.loc[opt.start:opt.end])
+        df_sub = df.loc[opt.start:opt.end].copy()
     else:
         df_sub = df  # or use the whole dataset
 
