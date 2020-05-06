@@ -31,10 +31,10 @@ def log_parse(original_log, **kwargs):
                 continue
 
             try:
-                #Do we have a TIMESTAMP, if we do and it's newer then use it
+                # Do we have a TIMESTAMP, if we do and it's newer then use it
                 if data[2] == "TIMESTAMP":
                     new_date = datetime.datetime.strptime(data[3], "%m/%d/%Y").date()
-                    # if it hasn't changed then value of current_date is OK
+                    # If it hasn't changed then value of current_date is OK
                     if new_date == current_date:
                         pass
                     else:
@@ -47,7 +47,7 @@ def log_parse(original_log, **kwargs):
             grabbag = ['IN:', 'OUT:', 'DENIED:', 'QUEUED:', 'DEQUEUED:']
             if [i for i in grabbag if i in data[2]]:
                 if re.findall("lmgrd", data[1]):
-                    continue # skip  flexlm housekeeping
+                    continue # skip flexlm housekeeping
 
                 data = current_date.strftime("%Y-%m-%d") + " " + " ".join(re.split(r'\s+|@|\.', line))
                 data = data.split(maxsplit=7)
@@ -58,7 +58,7 @@ def log_parse(original_log, **kwargs):
 
 
 def readfile_to_dataframe(**kwargs):
-    """read in file return datafrme"""
+    """Read in file, return dataframe"""
     filename = kwargs.get('filename')
     with open(filename, 'rt', encoding='utf-8', errors='ignore')as f:
         original_log = f.readlines()
@@ -105,10 +105,8 @@ def cmd_args(args=None):
 
     parser.add_argument('filename',
                         help='path/filename of logfile to file to parse')
-
     parser.add_argument('-i', '--hint', dest='hint',
                         help='Hint start date of the log YYYY-MM-DD')
-
     parser.add_argument('-s', '--start', dest='start',
                         help='Start date YYYY-MM-DDTHH:MM e.g 2020-03-23T13:24')
     parser.add_argument('-e', '--end', dest='end',
@@ -117,7 +115,6 @@ def cmd_args(args=None):
                         help='Duration: Hours, Days, Weeks,  e.g. 2W for 2 weeks')
 
     opt = parser.parse_args(args)
-
     return opt
 
 
@@ -257,7 +254,6 @@ def main(args=None):
     events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
     events['Duration'] = pd.to_timedelta(events['Duration'])
     graph(events, df_sub_ref, loans)
-
 
 
 if __name__ == '__main__':
