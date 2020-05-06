@@ -49,8 +49,8 @@ def log_parse(original_log, **kwargs):
             grabbag = ['IN:', 'OUT:', 'DENIED:', 'QUEUED:', 'DEQUEUED:']
             if [i for i in grabbag if i in data[2]]:
                 if re.findall("lmgrd", data[1]):
-                    continue # skip flexlm housekeeping 
-                elif re.findall("SUITE.*|MSI.*|License_Holder", data[3]):
+                    continue # skip flexlm housekeeping
+                if re.findall("SUITE.*|MSI.*|License_Holder", data[3]):
                     continue # skip the Token Library
 
                 data = current_date.strftime("%Y-%m-%d") + " " + " ".join(re.split(r'\s+|@|\.', line))
@@ -77,6 +77,8 @@ def readfile_to_dataframe(**kwargs):
 
 
 def graph(events, df_sub_ref):
+    """Draw graph of license use duration per user on timeline
+        plot time license unavailable as red x"""
     fig, ax = plt.subplots(figsize=(16, 10))
     ax.tick_params(axis='both', which='major', labelsize=6)
     ax.tick_params(axis='both', which='minor', labelsize=6)
@@ -123,6 +125,8 @@ def cmd_args(args=None):
 
 
 def process_opts(opt):
+    """Process cmdline options logic
+        Calculate ROI start and end times from combinations supplied"""
     kwargs = {}
     kwargs = {'filename': opt.filename, **kwargs}
     if opt.dur and opt.start and opt.end:
@@ -212,6 +216,7 @@ def dt_to_date(dateasdt, FORMAT):
 
 
 def main(args=None):
+    """Main function"""
     opt = cmd_args(args)
     kwargs = process_opts(opt)
     df = readfile_to_dataframe(**kwargs)
@@ -244,15 +249,17 @@ def main(args=None):
         user = getattr(row, 'User')
         out_time = getattr(row, 'Date')
         module = getattr(row, 'Module')
-        #print(f'index={index} user={user}, Out Time={out_time}')
-        if not(len(events)%1000):
+        # print(f'index={index} user={user}, Out Time={out_time}')
+        if not len(events)%1000:
             print(f'{len(events)} : {time.process_time()- t}')
 
         try:
-            key = ((df_sub_in.Module == module) & (df_sub_in.User == user) & (df_sub_in.index >= index))
+            key = ((df_sub_in.Module == module)
+                   & (df_sub_in.User == user)
+                   & (df_sub_in.index >= index))
             result = df_sub_in.loc[key]
             events.loc[len(events), :] = (out_time, (result.Date.iloc[0]), module,
-                                         (result.Date.iloc[0] - out_time), user)
+                                          (result.Date.iloc[0] - out_time), user)
         except IndexError:
             print(f'No MATCH! {row}')
         else:
@@ -261,8 +268,10 @@ def main(args=None):
     events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
     events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
     events['Duration'] = pd.to_timedelta(events['Duration'])
+    # Table of license refusals
     print(df_sub_ref)
     # Checkouts per module and duration
+    # TODO assign colours to modules pass to graph for colour key
     print(events.groupby(['Module'])['Duration'].agg(['sum', 'count']).sort_values(['sum'], ascending=False))
     print(events)
     graph(events, df_sub_ref)
