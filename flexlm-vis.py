@@ -13,6 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 
+# Req for ldap3 wrapper to real names for userID inside corporate LAN
 # import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
@@ -20,7 +21,7 @@ DT_FORMAT = '%Y-%m-%dT%H:%M'
 
 def log_parse(original_log, **kwargs):
     """Take logfile and add date to every time.
-    Keep only the events weare interested in """
+    Keep only the events weare interested in"""
     if kwargs.get('hint'):
         current_date = datetime.date.fromisoformat(kwargs.get('hint'))
         for line in original_log:
@@ -81,7 +82,8 @@ def graph(events, df_sub_ref):
     ax.tick_params(axis='both', which='minor', labelsize=6)
     labels = events['User']
     ax = ax.xaxis_date()
-    ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn), linewidth=6, color='blue')
+    ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn),
+                    linewidth=10, color='blue')
     ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
     fig.autofmt_xdate()
     plt.show()
@@ -221,7 +223,7 @@ def main(args=None):
         df_sub = df  # or use the whole dataset
 
     # Enable for AD lookup of User's real name
-    #df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
+    # df_sub.User = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
     print(df_sub.User.unique())
