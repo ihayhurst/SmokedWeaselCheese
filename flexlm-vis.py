@@ -12,6 +12,7 @@ import functools
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
+import seaborn as sns
 
 # Req for ldap3 wrapper to real names for userID inside corporate LAN
 # import ADlookup as ad
@@ -79,14 +80,18 @@ def readfile_to_dataframe(**kwargs):
 def graph(events, df_sub_ref):
     """Draw graph of license use duration per user on timeline
         plot time license unavailable as red x"""
+    color_labels = events.Module.unique()
+    rgb_values = sns.color_palette("Set2", len(color_labels))
+    color_map = dict(zip(color_labels, rgb_values))
     fig, ax = plt.subplots(figsize=(16, 10))
     ax.tick_params(axis='both', which='major', labelsize=6)
     ax.tick_params(axis='both', which='minor', labelsize=6)
     labels = events['User']
     ax = ax.xaxis_date()
     ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn),
-                    linewidth=10, color='blue')
-    ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
+                    linewidth=10, colors=events.Module.map(color_map))
+    plt.legend(color_map, color_labels)
+    bx = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
     fig.autofmt_xdate()
     plt.show()
 

@@ -73,17 +73,19 @@ def readfile_to_dataframe(**kwargs):
 
 
 def graph(events, df_sub_ref, loans):
+    """Draw graph of license use duration per user on timeline
+        plot time license unavailable as red x"""
     fig, ax = plt.subplots(figsize=(16, 10))
     fig.subplots_adjust(top=0.95)
     fig.subplots_adjust(right=0.75)
     fig.autofmt_xdate()
     #lines = ax.twinx()
-    ax.grid(which='major', axis='x', color='grey')
     color = 'tab:blue'
+    ax.grid(which='major', axis='x', color='grey')
     ax.tick_params(axis='both', which='major', labelsize=6)
     ax.tick_params(axis='both', which='minor', labelsize=6)
     ax.set_ylabel('Users', color=color)
-    ax.spines["right"].set_position(("axes"))
+    ax.spines["right"].set_position(("axes", 1))
     labels = events['User']
     ax = ax.xaxis_date()
 
