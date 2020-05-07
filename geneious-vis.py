@@ -12,7 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 
-# import ADlookup as ad
+import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
@@ -74,14 +74,24 @@ def readfile_to_dataframe(**kwargs):
 
 def graph(events, df_sub_ref, loans):
     fig, ax = plt.subplots(figsize=(16, 10))
+    fig.subplots_adjust(top=0.95)
+    fig.subplots_adjust(right=0.75)
+    fig.autofmt_xdate()
+    #lines = ax.twinx()
+    ax.grid(which='major', axis='x', color='grey')
+    color = 'tab:blue'
     ax.tick_params(axis='both', which='major', labelsize=6)
     ax.tick_params(axis='both', which='minor', labelsize=6)
+    ax.set_ylabel('Users', color=color)
+    ax.spines["right"].set_position(("axes"))
     labels = events['User']
     ax = ax.xaxis_date()
-    ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn), linewidth=6, color='blue')
+
+    loan_color = 'tab:green'
+    #lines.set_ylabel('Licenses checked OUT')
+    ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn), linewidth=6, color=color)
     ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
-    ax = loans.plot(style='g', alpha=0.4)
-    fig.autofmt_xdate()
+    ax = loans.plot(color=loan_color, linewidth=1, alpha=0.4, label='Licenses checked OUT' )
     plt.show()
 
 
@@ -113,6 +123,9 @@ def cmd_args(args=None):
                         help='End   date YYYY-MM-DDTHH:MM')
     parser.add_argument('-d', '--dur', dest='dur',
                         help='Duration: Hours, Days, Weeks,  e.g. 2W for 2 weeks')
+    parser.add_argument('-a', '--Active-Directory', dest='active_directory',
+                        action='store_true',
+                        help='Resolve user ID to real name  in Active Directory')
 
     opt = parser.parse_args(args)
     return opt
@@ -171,6 +184,10 @@ def process_opts(opt):
         current_date = opt.hint
         kwargs = {'hint': current_date, **kwargs}
 
+    if opt.active_directory:
+       # Resolve uid to realname in Active Directory
+       kwargs = {'active_directory': True, **kwargs}  
+
     if not opt.start:
         kwargs = {'from_date': opt.start, 'to_date': opt.end, **kwargs}
 
@@ -219,7 +236,8 @@ def main(args=None):
         df_sub = df  # or use the whole dataset
 
     # Enable for AD lookup of User's real name
-    #df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
+    if kwargs.get('active_directory'):
+        df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
     print(df_sub.User.unique())
@@ -231,8 +249,13 @@ def main(args=None):
 
     # Cumulative license loan tally
     x = df_sub_out.Date.value_counts().sub(df_sub_in.Date.value_counts(), fill_value=0)
-    x.iloc[-1] = 0
+    #x.iloc[0] = 0
     loans = x.cumsum()
+    print(x)
+    print(loans)
+    loans.to_frame()
+    #loans.reset_index(inplace=True)
+    print(loans.loc[df['Date'].idxmax()])
     print(loans)
 
     # Events table: For every checkout get checkin; calculate the loan duration
