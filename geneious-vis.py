@@ -75,25 +75,30 @@ def readfile_to_dataframe(**kwargs):
 def graph(events, df_sub_ref, loans):
     """Draw graph of license use duration per user on timeline
         plot time license unavailable as red x"""
-    fig, ax = plt.subplots(figsize=(16, 10))
-    fig.subplots_adjust(top=0.95)
-    fig.subplots_adjust(right=0.75)
-    fig.autofmt_xdate()
-    #lines = ax.twinx()
-    color = 'tab:blue'
-    ax.grid(which='major', axis='x', color='grey')
-    ax.tick_params(axis='both', which='major', labelsize=6)
-    ax.tick_params(axis='both', which='minor', labelsize=6)
-    ax.set_ylabel('Users', color=color)
-    ax.spines["right"].set_position(("axes", 1))
     labels = events['User']
-    ax = ax.xaxis_date()
+    fig, axes = plt.subplots(2, 1, sharex=True, figsize=(16, 10))
+    fig.autofmt_xdate()
+    axes[0] = plt.subplot2grid((5, 1), (0, 0), rowspan=4)
+    axes[1] = plt.subplot2grid((5, 1), (4, 0), rowspan=1)
+    color = 'tab:blue'
+    axes[0].grid(which='major', axis='x')
+    axes[0].tick_params(axis='both', which='major', labelsize=6)
+    axes[0].tick_params(axis='both', which='minor', labelsize=6)
+    axes[0].set_ylabel('Users', color=color)
+    axes[0].spines["right"].set_position(("axes", 1))
+    axes[0].xaxis_date()
 
     loan_color = 'tab:green'
-    #lines.set_ylabel('Licenses checked OUT')
-    ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn), linewidth=6, color=color)
-    ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
-    ax = loans.plot(color=loan_color, linewidth=1, alpha=0.4, label='Licenses checked OUT' )
+    axes[0].hlines(labels, date2num(events.LicOut), date2num(events.LicIn), linewidth=6, color=color)
+    axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
+
+    axes[1].set(ylim=(0, 35))
+    axes[1].set_ylabel('Licenses checked OUT')
+    axes[1] = plt.gca() 
+    axes[1].grid(which='major', axis='x', color='grey')
+    loans.plot(ax=axes[1], color=loan_color, linewidth=1, alpha=0.4, label='Licenses checked OUT')
+    fig.tight_layout()
+
     plt.show()
 
 
@@ -251,14 +256,13 @@ def main(args=None):
 
     # Cumulative license loan tally
     x = df_sub_out.Date.value_counts().sub(df_sub_in.Date.value_counts(), fill_value=0)
-    #x.iloc[0] = 0
+    x.iloc[0] = 0
     loans = x.cumsum()
-    print(x)
     print(loans)
-    loans.to_frame()
+    #loans.to_frame()
     #loans.reset_index(inplace=True)
     print(loans.loc[df['Date'].idxmax()])
-    print(loans)
+
 
     # Events table: For every checkout get checkin; calculate the loan duration
     events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User'])
