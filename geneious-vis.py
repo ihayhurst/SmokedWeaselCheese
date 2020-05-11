@@ -19,7 +19,7 @@ DT_FORMAT = '%Y-%m-%dT%H:%M'
 
 def log_parse(original_log, **kwargs):
     """Take logfile and add date to every time.
-    Keep only the events weare interested in """
+    Keep only the events we're interested in """
     if kwargs.get('hint'):
         current_date = datetime.date.fromisoformat(kwargs.get('hint'))
         for line in original_log:
@@ -88,13 +88,12 @@ def graph(events, df_sub_ref, loans):
     axes[0].set_ylabel('Users', color=color)
     axes[0].spines["right"].set_position(("axes", 1))
     axes[0].xaxis_date()
-
-    loan_color = 'tab:green'
     axes[0].hlines(labels, date2num(events.LicOut),
                    date2num(events.LicIn),
                    linewidth=6, color=color)
     axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
 
+    loan_color = 'tab:green'
     axes[1].set(ylim=(0, 35))
     axes[1].set_ylabel('Licenses checked OUT')
     axes[1] = plt.gca()
@@ -262,8 +261,6 @@ def main(args=None):
     print(loans)
     #loans.to_frame()
     #loans.reset_index(inplace=True)
-    #print(loans.loc[df['Date'].idxmax()])
-
 
     # Events table: For every checkout get checkin; calculate the loan duration
     events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User'])
