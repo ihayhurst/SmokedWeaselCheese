@@ -94,7 +94,7 @@ def graph(events, df_sub_ref, loans):
 
     axes[1].set(ylim=(0, 35))
     axes[1].set_ylabel('Licenses checked OUT')
-    axes[1] = plt.gca() 
+    axes[1] = plt.gca()
     axes[1].grid(which='major', axis='x', color='grey')
     loans.plot(ax=axes[1], color=loan_color, linewidth=1, alpha=0.4, label='Licenses checked OUT')
     fig.tight_layout()
@@ -141,30 +141,30 @@ def cmd_args(args=None):
 def process_opts(opt):
     kwargs = {}
     kwargs = {'filename': opt.filename, **kwargs}
+
+    if opt.dur:
+        # If set get timedelta it represents
+        duration = parse_duration(opt.dur)
+        print(f'Duration {opt.dur}')
+
     if opt.dur and opt.start and opt.end:
         # Assume start and range ignore end
-        print("Duration", opt.dur)
-        duration = parse_duration(opt.dur)
-        opt.end_dt = date_to_dt(opt.start, DT_FORMAT)+duration
+        opt.end_dt = date_to_dt(opt.start, DT_FORMAT) + duration
         opt.end = opt.end_dt.strftime(DT_FORMAT)
 
     if opt.dur and opt.start and not opt.end:
         # Start and range
-        print("Duration", opt.dur)
-        duration = parse_duration(opt.dur)
         opt.end_dt = date_to_dt(opt.start, DT_FORMAT) + duration
         opt.end = opt.end_dt.strftime(DT_FORMAT)
 
     if opt.dur and not opt.start and opt.end:
         # Range before enddate
-        duration = parse_duration(opt.dur)
         opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
         opt.start = opt.start_dt.strftime(DT_FORMAT)
 
         # This won't return the full duration until we know the end date in our log
     if opt.dur and not opt.start and not opt.end:
         # End of log back by duration
-        duration = parse_duration(opt.dur)
         opt.end_dt = datetime.datetime.now()
         opt.end = dt_to_date(opt.end_dt, DT_FORMAT)
         opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
@@ -192,8 +192,8 @@ def process_opts(opt):
         kwargs = {'hint': current_date, **kwargs}
 
     if opt.active_directory:
-       # Resolve uid to realname in Active Directory
-       kwargs = {'active_directory': True, **kwargs}  
+        # Resolve uid to realname in Active Directory
+        kwargs = {'active_directory': True, **kwargs}
 
     if not opt.start:
         kwargs = {'from_date': opt.start, 'to_date': opt.end, **kwargs}
@@ -232,10 +232,10 @@ def dt_to_date(dateasdt, FORMAT):
 
 
 def main(args=None):
+    """Start of main function"""
     opt = cmd_args(args)
     kwargs = process_opts(opt)
     df = readfile_to_dataframe(**kwargs)
-
     # Select observations between two datetimes
     if opt.start:
         df_sub = df.loc[opt.start:opt.end].copy()
@@ -261,7 +261,7 @@ def main(args=None):
     print(loans)
     #loans.to_frame()
     #loans.reset_index(inplace=True)
-    print(loans.loc[df['Date'].idxmax()])
+    #print(loans.loc[df['Date'].idxmax()])
 
 
     # Events table: For every checkout get checkin; calculate the loan duration
