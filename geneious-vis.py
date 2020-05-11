@@ -49,7 +49,8 @@ def log_parse(original_log, **kwargs):
                 if re.findall("lmgrd", data[1]):
                     continue # skip flexlm housekeeping
 
-                data = current_date.strftime("%Y-%m-%d") + " " + " ".join(re.split(r'\s+|@|\.', line))
+                record_date = current_date.strftime("%Y-%m-%d")
+                data = record_date + " " + " ".join(re.split(r'\s+|@|\.', line))
                 data = data.split(maxsplit=7)
             else:
                 continue
@@ -67,7 +68,7 @@ def readfile_to_dataframe(**kwargs):
         discard_cols = ['Time', 'Product', 'Module', 'Host', 'State']
         df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
         df['Date'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
-        df.drop([x for x in discard_cols], axis=1, inplace=True)
+        df.drop(list(discard_cols), axis=1, inplace=True)
         df = df.set_index(df['Date'])
     return df
 
@@ -89,7 +90,9 @@ def graph(events, df_sub_ref, loans):
     axes[0].xaxis_date()
 
     loan_color = 'tab:green'
-    axes[0].hlines(labels, date2num(events.LicOut), date2num(events.LicIn), linewidth=6, color=color)
+    axes[0].hlines(labels, date2num(events.LicOut),
+                   date2num(events.LicIn),
+                   linewidth=6, color=color)
     axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
 
     axes[1].set(ylim=(0, 35))
@@ -139,6 +142,7 @@ def cmd_args(args=None):
 
 
 def process_opts(opt):
+    """process logic for command line opts"""
     kwargs = {}
     kwargs = {'filename': opt.filename, **kwargs}
 
@@ -194,9 +198,6 @@ def process_opts(opt):
     if opt.active_directory:
         # Resolve uid to realname in Active Directory
         kwargs = {'active_directory': True, **kwargs}
-
-    if not opt.start:
-        kwargs = {'from_date': opt.start, 'to_date': opt.end, **kwargs}
 
     return kwargs
 
