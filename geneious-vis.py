@@ -280,7 +280,7 @@ def main(args=None):
     events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
     events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
     events['Duration'] = pd.to_timedelta(events['Duration'])
-    graph(events, df_sub_ref, loans)
+    #graph(events, df_sub_ref, loans)
 
 
 if __name__ == '__main__':
