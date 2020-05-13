@@ -9,9 +9,10 @@ import json
 import datetime
 import functools
 import pandas as pd
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
-
+import seaborn as sns
 import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
@@ -50,7 +51,7 @@ def log_parse(original_log, **kwargs):
                     continue # skip flexlm housekeeping
 
                 record_date = current_date.strftime("%Y-%m-%d")
-                data = record_date + " " + " ".join(re.split(r'\s+|@|\.', line))
+                data = f'{record_date} ' + " ".join(re.split(r'\s+|@|\.', line))
                 data = data.split(maxsplit=7)
             else:
                 continue
@@ -65,7 +66,7 @@ def readfile_to_dataframe(**kwargs):
         original_log = f.readlines()
         lines_we_keep = list(log_parse(original_log, **kwargs))
         columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'User', 'Host', 'State']
-        discard_cols = ['Time', 'Product', 'Module', 'Host', 'State']
+        discard_cols = ['Time', 'Product', 'Module', 'State']
         df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
         df['Date'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
         df.drop(list(discard_cols), axis=1, inplace=True)
@@ -76,6 +77,9 @@ def readfile_to_dataframe(**kwargs):
 def graph(events, df_sub_ref, loans):
     """Draw graph of license use duration per user on timeline
         plot time license unavailable as red x"""
+    color_labels = events.Host.unique()
+    rgb_values = sns.color_palette("Paired", len(color_labels))
+    color_map = dict(zip(color_labels, rgb_values))
     labels = events['User']
     fig, axes = plt.subplots(2, 1, sharex=True, figsize=(16, 10))
     fig.autofmt_xdate()
@@ -88,9 +92,12 @@ def graph(events, df_sub_ref, loans):
     axes[0].set_ylabel('Users', color=color)
     axes[0].spines["right"].set_position(("axes", 1))
     axes[0].xaxis_date()
+    patches = [ plt.plot([],[], marker="o", ms=10, ls="", mec=None, color=rgb_values[i], 
+            label="{:s}".format(color_labels[i]) )[0]  for i in range(len(color_labels)) ]
+    axes[0].legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
     axes[0].hlines(labels, date2num(events.LicOut),
                    date2num(events.LicIn),
-                   linewidth=6, color=color)
+                   linewidth=6, color=events.Host.map(color_map))
     axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
 
     loan_color = 'tab:green'
@@ -263,15 +270,16 @@ def main(args=None):
     #loans.reset_index(inplace=True)
 
     # Events table: For every checkout get checkin; calculate the loan duration
-    events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User'])
+    events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User', 'Host'])
     for index, row in df_sub_out.iterrows():
-        user = row['User']
-        out_time = row['Date']
+        user = row.User
+        out_time = row.Date
+        host = row.Host
         try:
             key = ((df_sub_in.User == user) & (df_sub_in.index >= index))
             result = df_sub_in.loc[key]
             events.loc[len(events), :] = (out_time, (result.Date.iloc[0]),
-                                          (result.Date.iloc[0] - out_time), user)
+                                          (result.Date.iloc[0] - out_time), user, host)
         except IndexError:
             print(f'No MATCH! {row}')
         else:
@@ -280,7 +288,11 @@ def main(args=None):
     events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
     events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
     events['Duration'] = pd.to_timedelta(events['Duration'])
-    #graph(events, df_sub_ref, loans)
+    # Truncate Host to 4 chars making them CAPS
+    events.Host = events.Host.str.slice(0,4)
+    events.Host = events.Host.str.upper()
+    print(events.groupby(['Host'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
+    graph(events, df_sub_ref, loans)
 
 
 if __name__ == '__main__':
