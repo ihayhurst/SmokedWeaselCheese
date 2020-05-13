@@ -9,6 +9,7 @@ import json
 import datetime
 import functools
 import pandas as pd
+import numpy as np
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
@@ -83,8 +84,8 @@ def graph(events, df_sub_ref, loans):
     labels = events['User']
     fig, axes = plt.subplots(2, 1, sharex=True, figsize=(16, 10))
     fig.autofmt_xdate()
-    axes[0] = plt.subplot2grid((5, 1), (0, 0), rowspan=4)
-    axes[1] = plt.subplot2grid((5, 1), (4, 0), rowspan=1)
+    axes[0] = plt.subplot2grid((6, 1), (0, 0), rowspan=5)
+    axes[1] = plt.subplot2grid((6, 1), (5, 0), rowspan=1, sharex=axes[0])
     color = 'tab:blue'
     axes[0].grid(which='major', axis='x')
     axes[0].tick_params(axis='both', which='major', labelsize=6)
@@ -101,11 +102,10 @@ def graph(events, df_sub_ref, loans):
     axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
 
     loan_color = 'tab:green'
-    axes[1].set(ylim=(0, 35))
+    axes[1].set(ylim=(0, 36))
     axes[1].set_ylabel('Licenses checked OUT')
-    axes[1] = plt.gca()
-    axes[1].grid(which='major', axis='x', color='grey')
-    loans.plot(ax=axes[1], color=loan_color, linewidth=1, alpha=0.4, label='Licenses checked OUT')
+    axes[1].grid(which='major', axis='x', alpha=0.5)
+    loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True, label='Licenses checked OUT')
     fig.tight_layout()
 
     plt.show()
@@ -292,7 +292,9 @@ def main(args=None):
     events.Host = events.Host.str.slice(0,4)
     events.Host = events.Host.str.upper()
     print(events.groupby(['Host'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
-    graph(events, df_sub_ref, loans)
+    grp = events.groupby('Host')['User'].nunique()
+    print(grp)
+    #graph(events, df_sub_ref, loans)
 
 
 if __name__ == '__main__':
