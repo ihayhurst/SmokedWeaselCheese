@@ -9,6 +9,7 @@ import json
 import datetime
 import functools
 import pandas as pd
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
@@ -77,7 +78,7 @@ def graph(events, df_sub_ref, loans):
     """Draw graph of license use duration per user on timeline
         plot time license unavailable as red x"""
     color_labels = events.Host.unique()
-    rgb_values = sns.color_palette("Set2", len(color_labels))
+    rgb_values = sns.color_palette("Paired", len(color_labels))
     color_map = dict(zip(color_labels, rgb_values))
     labels = events['User']
     fig, axes = plt.subplots(2, 1, sharex=True, figsize=(16, 10))
@@ -91,6 +92,9 @@ def graph(events, df_sub_ref, loans):
     axes[0].set_ylabel('Users', color=color)
     axes[0].spines["right"].set_position(("axes", 1))
     axes[0].xaxis_date()
+    patches = [ plt.plot([],[], marker="o", ms=10, ls="", mec=None, color=rgb_values[i], 
+            label="{:s}".format(color_labels[i]) )[0]  for i in range(len(color_labels)) ]
+    axes[0].legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
     axes[0].hlines(labels, date2num(events.LicOut),
                    date2num(events.LicIn),
                    linewidth=6, color=events.Host.map(color_map))
@@ -287,7 +291,7 @@ def main(args=None):
     # Truncate Host to 4 chars making them CAPS
     events.Host = events.Host.str.slice(0,4)
     events.Host = events.Host.str.upper()
-    print(events.groupby(['Host'])['Duration'].agg(['sum','count']).sort_values(['sum'], ascending=False))
+    print(events.groupby(['Host'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
     graph(events, df_sub_ref, loans)
 
 
