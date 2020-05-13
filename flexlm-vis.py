@@ -10,6 +10,7 @@ import time
 import datetime
 import functools
 import pandas as pd
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
@@ -53,8 +54,9 @@ def log_parse(original_log, **kwargs):
                     continue # skip flexlm housekeeping
                 if re.findall("SUITE.*|MSI.*|License_Holder", data[3]):
                     continue # skip the Token Library
-
-                data = current_date.strftime("%Y-%m-%d") + " " + " ".join(re.split(r'\s+|@|\.', line))
+              
+                record_date = current_date.strftime("%Y-%m-%d")
+                data = f'{record_date} ' + " ".join(re.split(r'\s+|@|\.', line))
                 data = data.split(maxsplit=7)
             else:
                 continue
@@ -72,7 +74,7 @@ def readfile_to_dataframe(**kwargs):
         discard_cols = ['Time', 'Product', 'Host', 'State']
         df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
         df['Date'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
-        df.drop([x for x in discard_cols], axis=1, inplace=True)
+        df.drop(list(discard_cols), axis=1, inplace=True)
         df = df.set_index(df['Date'])
     return df
 
@@ -81,18 +83,22 @@ def graph(events, df_sub_ref):
     """Draw graph of license use duration per user on timeline
         plot time license unavailable as red x"""
     color_labels = events.Module.unique()
-    rgb_values = sns.color_palette("Set2", len(color_labels))
+    rgb_values = sns.color_palette("Paired", len(color_labels))
     color_map = dict(zip(color_labels, rgb_values))
     fig, ax = plt.subplots(figsize=(16, 10))
     ax.tick_params(axis='both', which='major', labelsize=6)
     ax.tick_params(axis='both', which='minor', labelsize=6)
     labels = events['User']
+    fig.autofmt_xdate()
     ax = ax.xaxis_date()
+    patches = [ plt.plot([],[], marker="o", ms=10, ls="", mec=None, color=rgb_values[i], 
+            label="{:s}".format(color_labels[i]) )[0]  for i in range(len(color_labels))]
     ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn),
                     linewidth=10, colors=events.Module.map(color_map))
-    plt.legend(color_map, color_labels)
+    plt.legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
+
     bx = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
-    fig.autofmt_xdate()
+    fig.tight_layout()
     plt.show()
 
 
