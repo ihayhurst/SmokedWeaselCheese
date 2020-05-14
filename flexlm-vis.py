@@ -10,7 +10,6 @@ import time
 import datetime
 import functools
 import pandas as pd
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
@@ -54,7 +53,7 @@ def log_parse(original_log, **kwargs):
                     continue # skip flexlm housekeeping
                 if re.findall("SUITE.*|MSI.*|License_Holder", data[3]):
                     continue # skip the Token Library
-              
+
                 record_date = current_date.strftime("%Y-%m-%d")
                 data = f'{record_date} ' + " ".join(re.split(r'\s+|@|\.', line))
                 data = data.split(maxsplit=7)
@@ -91,9 +90,9 @@ def graph(events, df_sub_ref):
     labels = events['User']
     fig.autofmt_xdate()
     ax.xaxis_date()
-    patches = [ plt.plot([],[], marker="o", ms=10, ls="", mec=None, color=rgb_values[i], 
-            label="{:s}".format(color_labels[i]) )[0]  for i in range(len(color_labels))]
-    ax.hlines(labels, date2num(events.LicOut),date2num(events.LicIn),
+    patches = [ plt.plot([],[], marker="o", ms=10, ls="", mec=None, color=rgb_values[i],
+            label="{:s}".format(color_labels[i]))[0]  for i in range(len(color_labels))]
+    ax.hlines(labels, date2num(events.LicOut), date2num(events.LicIn),
               linewidth=10, colors=events.Module.map(color_map))
     plt.legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
 

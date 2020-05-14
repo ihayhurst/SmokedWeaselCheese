@@ -148,7 +148,8 @@ def cmd_args(args=None):
 
 
 def process_opts(opt):
-    """process logic for command line opts"""
+ """Process cmdline options logic
+        Calculate ROI start and end times from combinations supplied"""
     kwargs = {}
     kwargs = {'filename': opt.filename, **kwargs}
 
@@ -291,10 +292,14 @@ def main(args=None):
     # Truncate Host to 4 chars making them CAPS
     events.Host = events.Host.str.slice(0,4)
     events.Host = events.Host.str.upper()
-    print(events.groupby(['Host'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
-    grp = events.groupby('Host')['User'].nunique()
-    print(grp)
-    #graph(events, df_sub_ref, loans)
+    
+    #events.Host = events.Host.astype('category')
+    #print(events.groupby(['Host'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
+    #grp = events.groupby(['Host', 'User'])['Host'].unique().unstack('Host')
+    #grp = grp.T
+    #:wq
+    #print(grp)
+    graph(events, df_sub_ref, loans)
 
 
 if __name__ == '__main__':
