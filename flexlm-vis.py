@@ -94,9 +94,8 @@ def graph(events, df_sub_ref):
             label="{:s}".format(color_labels[i]))[0]  for i in range(len(color_labels))]
     ax.hlines(labels, date2num(events.LicOut), date2num(events.LicIn),
               linewidth=10, colors=events.Module.map(color_map))
-    plt.legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
-
-    bx = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
+    ax.legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
+    ax.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
     fig.tight_layout()
     plt.show()
 
