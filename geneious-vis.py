@@ -10,7 +10,6 @@ import datetime
 import functools
 import pandas as pd
 import numpy as np
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
@@ -93,8 +92,8 @@ def graph(events, df_sub_ref, loans):
     axes[0].set_ylabel('Users', color=color)
     axes[0].spines["right"].set_position(("axes", 1))
     axes[0].xaxis_date()
-    patches = [ plt.plot([],[], marker="o", ms=10, ls="", mec=None, color=rgb_values[i], 
-            label="{:s}".format(color_labels[i]) )[0]  for i in range(len(color_labels)) ]
+    patches = [plt.plot([], [], marker="o", ms=10, ls="", mec=None, color=rgb_values[i],
+                        label="{:s}".format(color_labels[i]))[0]  for i in range(len(color_labels))]
     axes[0].legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
     axes[0].hlines(labels, date2num(events.LicOut),
                    date2num(events.LicIn),
@@ -107,7 +106,6 @@ def graph(events, df_sub_ref, loans):
     axes[1].grid(which='major', axis='x', alpha=0.5)
     loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True, label='Licenses checked OUT')
     fig.tight_layout()
-
     plt.show()
 
 
@@ -148,7 +146,7 @@ def cmd_args(args=None):
 
 
 def process_opts(opt):
- """Process cmdline options logic
+    """Process cmdline options logic
         Calculate ROI start and end times from combinations supplied"""
     kwargs = {}
     kwargs = {'filename': opt.filename, **kwargs}
@@ -267,8 +265,6 @@ def main(args=None):
     x.iloc[0] = 0
     loans = x.cumsum()
     print(loans)
-    #loans.to_frame()
-    #loans.reset_index(inplace=True)
 
     # Events table: For every checkout get checkin; calculate the loan duration
     events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User', 'Host'])
@@ -290,9 +286,9 @@ def main(args=None):
     events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
     events['Duration'] = pd.to_timedelta(events['Duration'])
     # Truncate Host to 4 chars making them CAPS
-    events.Host = events.Host.str.slice(0,4)
+    events.Host = events.Host.str.slice(0, 4)
     events.Host = events.Host.str.upper()
-    
+
     #events.Host = events.Host.astype('category')
     #print(events.groupby(['Host'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
     #grp = events.groupby(['Host', 'User'])['Host'].unique().unstack('Host')

@@ -10,7 +10,6 @@ import time
 import datetime
 import functools
 import pandas as pd
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
@@ -77,25 +76,37 @@ def readfile_to_dataframe(**kwargs):
     return df
 
 
-def graph(events, df_sub_ref):
+def graph(events, df_sub_ref, loans):
     """Draw graph of license use duration per user on timeline
         plot time license unavailable as red x"""
     color_labels = events.Module.unique()
     rgb_values = sns.color_palette("Paired", len(color_labels))
     color_map = dict(zip(color_labels, rgb_values))
-    fig, ax = plt.subplots(figsize=(16, 10))
-    ax.tick_params(axis='both', which='major', labelsize=6)
-    ax.tick_params(axis='both', which='minor', labelsize=6)
     labels = events['User']
+    fig, axes = plt.subplots(2, 1, sharex=True, figsize=(16, 10))
     fig.autofmt_xdate()
-    ax.xaxis_date()
-    patches = [ plt.plot([],[], marker="o", ms=10, ls="", mec=None, color=rgb_values[i], 
-            label="{:s}".format(color_labels[i]))[0]  for i in range(len(color_labels))]
-    ax.hlines(labels, date2num(events.LicOut),
-              date2num(events.LicIn),
-              linewidth=6, color=events.Module.map(color_map))
-    ax.legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
-    ax.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
+    axes[0] = plt.subplot2grid((6, 1), (0, 0), rowspan=5)
+    axes[1] = plt.subplot2grid((6, 1), (5, 0), rowspan=1, sharex=axes[0])
+    color = 'tab:blue'
+    axes[0].grid(which='major', axis='x')
+    axes[0].tick_params(axis='both', which='major', labelsize=6)
+    axes[0].tick_params(axis='both', which='minor', labelsize=6)
+    axes[0].set_ylabel('Users', color=color)
+    axes[0].spines["right"].set_position(("axes", 1))
+    axes[0].xaxis_date()
+    patches = [plt.plot([], [], marker="o", ms=10, ls="", mec=None, color=rgb_values[i],
+                        label="{:s}".format(color_labels[i]))[0]  for i in range(len(color_labels))]
+    axes[0].legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
+    axes[0].hlines(labels, date2num(events.LicOut),
+                   date2num(events.LicIn),
+                   linewidth=6, color=events.Module.map(color_map))
+    axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
+
+    loan_color = 'tab:green'
+    axes[1].set(ylim=(0, 36))
+    axes[1].set_ylabel('Token Library')
+    axes[1].grid(which='major', axis='x', alpha=0.5)
+    loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True, label='Licenses checked OUT')
     fig.tight_layout()
     plt.show()
 
@@ -192,8 +203,8 @@ def process_opts(opt):
         kwargs = {'hint': current_date, **kwargs}
 
     if opt.active_directory:
-       # Resolve uid to realname in Active Directory
-       kwargs = {'active_directory': True, **kwargs}
+        # Resolve uid to realname in Active Directory
+        kwargs = {'active_directory': True, **kwargs}
 
     return kwargs
 
@@ -248,19 +259,19 @@ def main(args=None):
     # Make collection of token library
     token_tally = df_sub[df_sub['Module'].str.contains('SUITE_')]
     # Now purge it from our data
-    df_sub.drop(df_sub[df_sub['Module'].str.contains('SUITE_')].index, inplace=True)
+    df_sub = df_sub[~df_sub.Module.str.contains('"SUITE_')]
     # Split Checkout and checkin events: record refusals too
     df_sub_out = df_sub[df_sub['Action'] == 'OUT:']
     df_sub_in = df_sub[df_sub['Action'] == 'IN:']
     df_sub_ref = df_sub[df_sub['Action'] == 'DENIED:']
 
     # Cumulative license loan tally
-    print(token_tally)
-    #token_in = df_sub_in[df_sub_in['Module'] == 'SUITE*']
-    #x = df_sub_out[token_out].Date.value_counts().sub(df_sub_in[token_in].Date.value_counts(), fill_value=0)
-    #x.iloc[0] = 0
-    #loans = x.cumsum()
-    #print(loans)
+    token_out = token_tally[token_tally.Action.str.contains('OUT')]
+    token_in = token_tally[token_tally.Action.str.contains('IN')]
+    x = token_out.Date.value_counts().sub(token_in.Date.value_counts(), fill_value=0)
+    x.iloc[0] = 0
+    loans = x.cumsum()
+    print(loans)
 
     # Events table: For every checkout get checkin; calculate the loan duration
     events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Module', 'Duration', 'User'])
@@ -292,7 +303,7 @@ def main(args=None):
     # Checkouts per module and duration
     print(events.groupby(['Module'])['Duration'].agg(['sum', 'count']).sort_values(['sum'], ascending=False))
     print(events)
-    graph(events, df_sub_ref)
+    graph(events, df_sub_ref, loans)
 
 
 if __name__ == '__main__':
