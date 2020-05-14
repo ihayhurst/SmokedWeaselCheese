@@ -90,11 +90,11 @@ def graph(events, df_sub_ref):
     ax.tick_params(axis='both', which='minor', labelsize=6)
     labels = events['User']
     fig.autofmt_xdate()
-    ax = ax.xaxis_date()
+    ax.xaxis_date()
     patches = [ plt.plot([],[], marker="o", ms=10, ls="", mec=None, color=rgb_values[i], 
             label="{:s}".format(color_labels[i]) )[0]  for i in range(len(color_labels))]
-    ax = plt.hlines(labels, date2num(events.LicOut), date2num(events.LicIn),
-                    linewidth=10, colors=events.Module.map(color_map))
+    ax.hlines(labels, date2num(events.LicOut),date2num(events.LicIn),
+              linewidth=10, colors=events.Module.map(color_map))
     plt.legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
 
     bx = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
@@ -130,6 +130,9 @@ def cmd_args(args=None):
                         help='End   date YYYY-MM-DDTHH:MM')
     parser.add_argument('-d', '--dur', dest='dur',
                         help='Duration: Hours, Days, Weeks,  e.g. 2W for 2 weeks')
+    parser.add_argument('-a', '--Active-Directory', dest='active_directory',
+                        action='store_true',
+                        help='Resolve user ID to real name  in Active Directory')
 
     opt = parser.parse_args(args)
     return opt
@@ -140,30 +143,30 @@ def process_opts(opt):
         Calculate ROI start and end times from combinations supplied"""
     kwargs = {}
     kwargs = {'filename': opt.filename, **kwargs}
+
+    if opt.dur:
+        # If set get timedelta it represents
+        duration = parse_duration(opt.dur)
+        print(f'Duration {opt.dur}')
+
     if opt.dur and opt.start and opt.end:
         # Assume start and range ignore end
-        print("Duration", opt.dur)
-        duration = parse_duration(opt.dur)
-        opt.end_dt = date_to_dt(opt.start, DT_FORMAT)+duration
+        opt.end_dt = date_to_dt(opt.start, DT_FORMAT) + duration
         opt.end = opt.end_dt.strftime(DT_FORMAT)
 
     if opt.dur and opt.start and not opt.end:
         # Start and range
-        print("Duration", opt.dur)
-        duration = parse_duration(opt.dur)
         opt.end_dt = date_to_dt(opt.start, DT_FORMAT) + duration
         opt.end = opt.end_dt.strftime(DT_FORMAT)
 
     if opt.dur and not opt.start and opt.end:
         # Range before enddate
-        duration = parse_duration(opt.dur)
         opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
         opt.start = opt.start_dt.strftime(DT_FORMAT)
 
         # This won't return the full duration until we know the end date in our log
     if opt.dur and not opt.start and not opt.end:
         # End of log back by duration
-        duration = parse_duration(opt.dur)
         opt.end_dt = datetime.datetime.now()
         opt.end = dt_to_date(opt.end_dt, DT_FORMAT)
         opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
@@ -190,8 +193,9 @@ def process_opts(opt):
         current_date = opt.hint
         kwargs = {'hint': current_date, **kwargs}
 
-    if not opt.start:
-        kwargs = {'from_date': opt.start, 'to_date': opt.end, **kwargs}
+        if opt.active_directory:
+            # Resolve uid to realname in Active Directory
+            kwargs = {'active_directory': True, **kwargs}
 
     return kwargs
 
@@ -239,7 +243,8 @@ def main(args=None):
         df_sub = df  # or use the whole dataset
 
     # Enable for AD lookup of User's real name
-    # df_sub.User = df_sub.apply(lambda row: simple_user(row.User), axis=1)
+        if kwargs.get('active_directory'):
+            df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
     print(df_sub.User.unique())
