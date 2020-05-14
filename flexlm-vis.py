@@ -10,19 +10,18 @@ import time
 import datetime
 import functools
 import pandas as pd
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
-
-# Req for ldap3 wrapper to real names for userID inside corporate LAN
-# import ADlookup as ad
+import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
 
 def log_parse(original_log, **kwargs):
     """Take logfile and add date to every time.
-    Keep only the events weare interested in"""
+    Keep only the events we're interested in """
     if kwargs.get('hint'):
         current_date = datetime.date.fromisoformat(kwargs.get('hint'))
         for line in original_log:
@@ -51,9 +50,9 @@ def log_parse(original_log, **kwargs):
             if [i for i in grabbag if i in data[2]]:
                 if re.findall("lmgrd", data[1]):
                     continue # skip flexlm housekeeping
-                if re.findall("SUITE.*|MSI.*|License_Holder", data[3]):
-                    continue # skip the Token Library
-
+                #if re.findall("SUITE.*|MSI.*|License_Holder", data[3]):
+                    #continue # skip the Token Library
+              
                 record_date = current_date.strftime("%Y-%m-%d")
                 data = f'{record_date} ' + " ".join(re.split(r'\s+|@|\.', line))
                 data = data.split(maxsplit=7)
@@ -90,10 +89,11 @@ def graph(events, df_sub_ref):
     labels = events['User']
     fig.autofmt_xdate()
     ax.xaxis_date()
-    patches = [ plt.plot([],[], marker="o", ms=10, ls="", mec=None, color=rgb_values[i],
+    patches = [ plt.plot([],[], marker="o", ms=10, ls="", mec=None, color=rgb_values[i], 
             label="{:s}".format(color_labels[i]))[0]  for i in range(len(color_labels))]
-    ax.hlines(labels, date2num(events.LicOut), date2num(events.LicIn),
-              linewidth=10, colors=events.Module.map(color_map))
+    ax.hlines(labels, date2num(events.LicOut),
+              date2num(events.LicIn),
+              linewidth=6, color=events.Module.map(color_map))
     ax.legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
     ax.plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
     fig.tight_layout()
@@ -191,9 +191,9 @@ def process_opts(opt):
         current_date = opt.hint
         kwargs = {'hint': current_date, **kwargs}
 
-        if opt.active_directory:
-            # Resolve uid to realname in Active Directory
-            kwargs = {'active_directory': True, **kwargs}
+    if opt.active_directory:
+       # Resolve uid to realname in Active Directory
+       kwargs = {'active_directory': True, **kwargs}
 
     return kwargs
 
@@ -229,11 +229,10 @@ def dt_to_date(dateasdt, FORMAT):
 
 
 def main(args=None):
-    """Main function"""
+    """Start of main function"""
     opt = cmd_args(args)
     kwargs = process_opts(opt)
     df = readfile_to_dataframe(**kwargs)
-
      # Select observations between two datetimes
     if opt.start:
         df_sub = df.loc[opt.start:opt.end].copy()
@@ -241,19 +240,27 @@ def main(args=None):
         df_sub = df  # or use the whole dataset
 
     # Enable for AD lookup of User's real name
-        if kwargs.get('active_directory'):
-            df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
+    if kwargs.get('active_directory'):
+        df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
     print(df_sub.User.unique())
-
+    # Make collection of token library
+    token_tally = df_sub[df_sub['Module'].str.contains('SUITE_')]
+    # Now purge it from our data
+    df_sub.drop(df_sub[df_sub['Module'].str.contains('SUITE_')].index, inplace=True)
     # Split Checkout and checkin events: record refusals too
     df_sub_out = df_sub[df_sub['Action'] == 'OUT:']
     df_sub_in = df_sub[df_sub['Action'] == 'IN:']
     df_sub_ref = df_sub[df_sub['Action'] == 'DENIED:']
 
     # Cumulative license loan tally
-    # not needed here yet
+    print(token_tally)
+    #token_in = df_sub_in[df_sub_in['Module'] == 'SUITE*']
+    #x = df_sub_out[token_out].Date.value_counts().sub(df_sub_in[token_in].Date.value_counts(), fill_value=0)
+    #x.iloc[0] = 0
+    #loans = x.cumsum()
+    #print(loans)
 
     # Events table: For every checkout get checkin; calculate the loan duration
     events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Module', 'Duration', 'User'])
@@ -282,10 +289,7 @@ def main(args=None):
     events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
     events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
     events['Duration'] = pd.to_timedelta(events['Duration'])
-    # Table of license refusals
-    print(df_sub_ref)
     # Checkouts per module and duration
-    # TODO assign colours to modules pass to graph for colour key
     print(events.groupby(['Module'])['Duration'].agg(['sum', 'count']).sort_values(['sum'], ascending=False))
     print(events)
     graph(events, df_sub_ref)
