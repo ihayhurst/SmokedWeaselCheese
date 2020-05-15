@@ -44,7 +44,8 @@ def log_parse(original_log, **kwargs):
                         continue
             except IndexError:
                 continue
-
+            token_value = re.compile(r"(?:\s+\((\d+)?\slicenses\))")
+            #token_value = re.compile(r"\s+\((\d+)?\slicenses\)")
             grabbag = ['IN:', 'OUT:', 'DENIED:', 'QUEUED:', 'DEQUEUED:']
             if [i for i in grabbag if i in data[2]]:
                 if re.findall("lmgrd", data[1]):
@@ -55,6 +56,13 @@ def log_parse(original_log, **kwargs):
                 record_date = current_date.strftime("%Y-%m-%d")
                 data = f'{record_date} ' + " ".join(re.split(r'\s+|@|\.', line))
                 data = data.split(maxsplit=7)
+                if len(data) == 8:
+                    if (match := re.search(token_value, data[7])) is not None:
+                        data[7] =int( match.group(1))
+                    else:
+                        data[7] = 1
+                else:
+                    data.append(1)
             else:
                 continue
 
@@ -67,11 +75,12 @@ def readfile_to_dataframe(**kwargs):
     with open(filename, 'rt', encoding='utf-8', errors='ignore')as f:
         original_log = f.readlines()
         lines_we_keep = list(log_parse(original_log, **kwargs))
-        columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'User', 'Host', 'State']
-        discard_cols = ['Time', 'Product', 'Host', 'State']
+        columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'User', 'Host', 'Tokens']
+        discard_cols = ['Time', 'Product', 'Host']
         df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
         df['Date'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
         df.drop(list(discard_cols), axis=1, inplace=True)
+        df.astype({'Tokens': 'int32'})
         df = df.set_index(df['Date'])
     return df
 
@@ -100,13 +109,13 @@ def graph(events, df_sub_ref, loans):
     axes[0].hlines(labels, date2num(events.LicOut),
                    date2num(events.LicIn),
                    linewidth=6, color=events.Module.map(color_map))
-    axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'rx')
+    axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'kx', linewidth=10)
 
     loan_color = 'tab:green'
-    axes[1].set(ylim=(0, 36))
+    axes[1].set(ylim=(0, 80))
     axes[1].set_ylabel('Token Library')
     axes[1].grid(which='major', axis='x', alpha=0.5)
-    loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True, label='Licenses checked OUT')
+    loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True,)
     fig.tight_layout()
     plt.show()
 
@@ -254,6 +263,8 @@ def main(args=None):
     if kwargs.get('active_directory'):
         df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
+    print(df_sub['Tokens'])
+
     # Unique users in time range
     print(df_sub.User.unique())
     # Make collection of token library
@@ -268,8 +279,7 @@ def main(args=None):
     # Cumulative license loan tally
     token_out = token_tally[token_tally.Action.str.contains('OUT')]
     token_in = token_tally[token_tally.Action.str.contains('IN')]
-    x = token_out.Date.value_counts().sub(token_in.Date.value_counts(), fill_value=0)
-    x.iloc[0] = 0
+    x = token_out.Tokens.sub(token_in.Tokens, fill_value=0)
     loans = x.cumsum()
     print(loans)
 
