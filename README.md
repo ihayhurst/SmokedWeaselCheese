@@ -27,15 +27,15 @@ Read generator lines into dataframe, find checkin events for each checkout, anal
   
 * flexlm-vis.py for Log in the form of: (modules (muliple token vals) and Token SUITE)
 
-  > 15:05:51 (ACME) IN: "SUITE_ROAD_RUNNER" wcyote@GBAZL5CG8343SD5  (4 licenses) 
-  > 15:06:29 (ACME) OUT: "SUITE_ROAD_RUNNER" wcyote@GBAZL5CG8343SD5 
-  > 15:06:29 (ACME) OUT: "ROCK_KIT" wcyote@GBAZL5CG8343SD5 
-  > 15:06:29 (ACME) OUT: "SUITE_ROAD_RUNNER" wcyote@GBJHL5CG8343SD5  (4 licenses) 
-  > 15:06:29 (ACME) OUT: "ROCK_KIT" wcyote@GBAZL5CG8343SD5  (4 licenses) 
-  > 15:07:00 (ACME) OUT: "FAKE_TUNNEL" rrunner@GBOKL5CG8173XY2 
-  > 15:07:00 (ACME) IN: "FAKE_TUNNEL" rrunner@GBOKL5CG8173XY2 
-  > 15:14:33 (ACME) OUT: "FAKE_TUNNEL" meepmeep@CHCAL5CG6457133 
-  > 15:14:33 (ACME) IN: "FAKE_TUNNEL" meepmeep@CHCAL5CG6457133 
+  > 15:05:51 (ACME) IN: "SUITE_ROAD_RUNNER" wcyote@GBAZL5CG8343SD5  (4 licenses)  
+  > 15:06:29 (ACME) OUT: "SUITE_ROAD_RUNNER" wcyote@GBAZL5CG8343SD5  
+  > 15:06:29 (ACME) OUT: "ROCK_KIT" wcyote@GBAZL5CG8343SD5  
+  > 15:06:29 (ACME) OUT: "SUITE_ROAD_RUNNER" wcyote@GBJHL5CG8343SD5  (4 licenses)  
+  > 15:06:29 (ACME) OUT: "ROCK_KIT" wcyote@GBAZL5CG8343SD5  (4 licenses)  
+  > 15:07:00 (ACME) OUT: "FAKE_TUNNEL" rrunner@GBOKL5CG8173XY2  
+  > 15:07:00 (ACME) IN: "FAKE_TUNNEL" rrunner@GBOKL5CG8173XY2  
+  > 15:14:33 (ACME) OUT: "FAKE_TUNNEL" meepmeep@CHCAL5CG6457133  
+  > 15:14:33 (ACME) IN: "FAKE_TUNNEL" meepmeep@CHCAL5CG6457133  
 
 
 > `usage: Prepares license log for datamining. [-h] [-i HINT] [-s START] [-e END] [-d DUR] filename`  
