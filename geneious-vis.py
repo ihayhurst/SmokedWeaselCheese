@@ -104,7 +104,7 @@ def graph(events, df_sub_ref, loans):
     axes[1].set(ylim=(0, 36))
     axes[1].set_ylabel('Licenses checked OUT')
     axes[1].grid(which='major', axis='x', alpha=0.5)
-    loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True, label='Licenses checked OUT')
+    loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True,)
     fig.tight_layout()
     plt.show()
 
