@@ -81,7 +81,7 @@ def graph(events, df_sub_ref, loans):
     rgb_values = sns.color_palette("Paired", len(color_labels))
     color_map = dict(zip(color_labels, rgb_values))
     labels = events['User']
-    fig, axes = plt.subplots(2, 1, sharex=True, figsize=(16, 10))
+    fig, axes = plt.subplots(2, 1, sharex=True, figsize=(16, 12))
     fig.autofmt_xdate()
     axes[0] = plt.subplot2grid((6, 1), (0, 0), rowspan=5)
     axes[1] = plt.subplot2grid((6, 1), (5, 0), rowspan=1, sharex=axes[0])
@@ -103,8 +103,9 @@ def graph(events, df_sub_ref, loans):
     loan_color = 'tab:green'
     axes[1].set(ylim=(0, 36))
     axes[1].set_ylabel('Licenses checked OUT')
+    axes[1].set_yticks(np.arange(0, 36, step=6))
     axes[1].grid(which='major', axis='x', alpha=0.5)
-    loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True, label='Licenses checked OUT')
+    loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True)
     fig.tight_layout()
     plt.show()
 
@@ -253,6 +254,7 @@ def main(args=None):
         df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
+    print('Unique Users')
     print(df_sub.User.unique())
 
     # Split Checkout and checkin events: record refusals too
@@ -285,16 +287,29 @@ def main(args=None):
     events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
     events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
     events['Duration'] = pd.to_timedelta(events['Duration'])
+
     # Truncate Host to 4 chars making them CAPS
     events.Host = events.Host.str.slice(0, 4)
     events.Host = events.Host.str.upper()
 
-    #events.Host = events.Host.astype('category')
-    #print(events.groupby(['Host'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
+    # Convert Ken's machines to GBJH
+    events.replace(to_replace=r'(LOVE|BUFF|SPIK)', value='GBJH', regex=True, inplace=True)
+
+    # Sort by Site (else graph is by login time)
+    events.sort_values(by=['Host'], inplace=True)
+
+    # Find users that forget to log out
+    lazy_logins = parse_duration('9H')
+    users_overtime = events[events.Duration  >= lazy_logins]
+    print('Number of occasions users session goes over 9 Hours')
+    print(users_overtime[['User', 'Duration']].groupby(['User'])['Duration'].agg(['count']).sort_values(['count'], ascending=False))
+
+    print(events.groupby(['Host'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
+    print(events.groupby('Host')['User'].nunique())
     #grp = events.groupby(['Host', 'User'])['Host'].unique().unstack('Host')
     #grp = grp.T
-    #:wq
     #print(grp)
+
     graph(events, df_sub_ref, loans)
 
 
