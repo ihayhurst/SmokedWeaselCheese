@@ -30,7 +30,7 @@ Read generator lines into dataframe, find checkin events for each checkout, anal
   > 15:05:51 (ACME) IN: "SUITE_ROAD_RUNNER" wcyote@GBAZL5CG8343SD5  (4 licenses)  
   > 15:06:29 (ACME) OUT: "SUITE_ROAD_RUNNER" wcyote@GBAZL5CG8343SD5  
   > 15:06:29 (ACME) OUT: "ROCK_KIT" wcyote@GBAZL5CG8343SD5  
-  > 15:06:29 (ACME) OUT: "SUITE_ROAD_RUNNER" wcyote@GBJHL5CG8343SD5  (4 licenses)  
+  > 15:06:29 (ACME) OUT: "SUITE_ROAD_RUNNER" wcyote@GBAZ5CG8343SD5  (4 licenses)  
   > 15:06:29 (ACME) OUT: "ROCK_KIT" wcyote@GBAZL5CG8343SD5  (4 licenses)  
   > 15:07:00 (ACME) OUT: "FAKE_TUNNEL" rrunner@GBOKL5CG8173XY2  
   > 15:07:00 (ACME) IN: "FAKE_TUNNEL" rrunner@GBOKL5CG8173XY2  

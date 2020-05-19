@@ -58,7 +58,7 @@ def log_parse(original_log, **kwargs):
                 data = data.split(maxsplit=7)
                 if len(data) == 8:
                     if (match := re.search(token_value, data[7])) is not None:
-                        data[7] =int( match.group(1))
+                        data[7] =int(match.group(1))
                     else:
                         data[7] = 1
                 else:
