@@ -55,4 +55,3 @@ Read generator lines into dataframe, find checkin events for each checkout, anal
 >   -a, --Active-Directory  
 >                         Resolve user ID to real name in Active Directory  
 
-![Log analysis Output](./MAY-loganalysis-USER.png?raw=true "May log analysis")
