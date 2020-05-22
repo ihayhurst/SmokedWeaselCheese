@@ -53,15 +53,4 @@ Read generator lines into dataframe, find checkin events for each checkout, anal
 >   -a, --Active-Directory
 >                         Resolve user ID to real name in Active Directory
 
-![Alt text](MAY-loganalysis-USER.png?raw=true "May log analysis")
-> `positional arguments:`
-> `filename              path/filename of logfile to file to parse`  
-
-> `optional arguments:`  
->  `-h, --help            show this help message and exit`  
->  `-i HINT, --hint HINT  Hint start date of the log YYYY-MM-DD`  
->  `-s START, --start START`  
->  `                      Start date YYYY-MM-DDTHH:MM e.g 2020-03-23T13:24`  
->  `-e END, --end END     End date YYYY-MM-DDTHH:MM`  
->  `-d DUR, --dur DUR     Duration: Hours, Days, Weeks, e.g. 2W for 2 weeks`  
-
+![Log analysis Output](./MAY-loganalysis-USER.png?raw=true "May log analysis")
