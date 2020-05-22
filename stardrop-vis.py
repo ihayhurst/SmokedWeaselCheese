@@ -11,16 +11,14 @@ import functools
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
-
-# Req for ldap3 wrapper to real names for userID inside corporate LAN
-import ADlookup as ad
+#import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
 
 def log_parse(original_log):
     """Take logfile trim off hash
-    Keep only the events we are interested in"""
+    Keep only the events we're interested in"""
     grabbag = ['License_released',
                'License_granted',
                'Purging_license',
@@ -44,12 +42,9 @@ def readfile_to_dataframe(**kwargs):
     with open(filename, 'rt', encoding='utf-8', errors='ignore')as f:
         original_log = f.readlines()
         lines_we_keep = list(log_parse(original_log))
-        df = pd.DataFrame.from_records(lines_we_keep,
-                                       columns=['User',
-                                                'Action',
-                                                'Number',
-                                                'Date'])
-        df['Date']  = pd.to_datetime(df['Date'])
+        columns_read = ['User', 'Action', 'Number', 'Date']
+        df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
+        df['Date'] = pd.to_datetime(df['Date'])
         df = df.set_index(df['Date'])
         return df
 
@@ -203,8 +198,8 @@ def main(args=None):
     if kwargs.get('active_directory'):
         df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
-
     # Unique users in time range
+        print('Unique Users')
     print(df_sub.User.unique())
 
     # Split Checkout and checkin events: record refusals too
@@ -217,8 +212,8 @@ def main(args=None):
     # Events table: For every checkout get checkin; calculate the loan duration
     events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User'])
     for index, row in df_sub_out.iterrows():
-        user = row['User']
-        out_time = row['Date']
+        user = row.User
+        out_time = row.Date
         try:
             key = ((df_sub_in.User == user) & (df_sub_in.index >= index))
             result = df_sub_in.loc[key]

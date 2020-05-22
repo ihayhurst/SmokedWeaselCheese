@@ -13,7 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
-import ADlookup as ad
+#import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
