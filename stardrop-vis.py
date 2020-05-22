@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
+"""Parse  Optibrium-Stardrop Flexlm style log file.
+   Show graphics of useage and availability of license """
 import re
 import argparse
 import sys
@@ -11,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 
 # Req for ldap3 wrapper to real names for userID inside corporate LAN
-# import ADlookup as ad
+import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
@@ -91,38 +93,43 @@ def cmd_args(args=None):
                         help='End   date YYYY-MM-DDTHH:MM')
     parser.add_argument('-d', '--dur', dest='dur',
                         help='Duration: Hours, Days, Weeks,  e.g. 2W for 2 weeks')
+    parser.add_argument('-a', '--Active-Directory', dest='active_directory',
+                        action='store_true',
+                        help='Resolve user ID to real name  in Active Directory')
 
     opt = parser.parse_args(args)
     return opt
 
 
 def process_opts(opt):
+    """Process cmdline options logic
+        Calculate ROI start and end times from combinations supplied"""
     kwargs = {}
     kwargs = {'filename': opt.filename, **kwargs}
+
+    if opt.dur:
+        # If set get timedelta it represents
+        duration = parse_duration(opt.dur)
+        print(f'Duration {opt.dur}')
+
     if opt.dur and opt.start and opt.end:
         # Assume start and range ignore end
-        print("Duration", opt.dur)
-        duration = parse_duration(opt.dur)
-        opt.end_dt = date_to_dt(opt.start, DT_FORMAT)+duration
+        opt.end_dt = date_to_dt(opt.start, DT_FORMAT) + duration
         opt.end = opt.end_dt.strftime(DT_FORMAT)
 
     if opt.dur and opt.start and not opt.end:
         # Start and range
-        print("Duration", opt.dur)
-        duration = parse_duration(opt.dur)
         opt.end_dt = date_to_dt(opt.start, DT_FORMAT) + duration
         opt.end = opt.end_dt.strftime(DT_FORMAT)
 
     if opt.dur and not opt.start and opt.end:
         # Range before enddate
-        duration = parse_duration(opt.dur)
         opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
         opt.start = opt.start_dt.strftime(DT_FORMAT)
 
         # This won't return the full duration until we know the end date in our log
     if opt.dur and not opt.start and not opt.end:
         # End of log back by duration
-        duration = parse_duration(opt.dur)
         opt.end_dt = datetime.datetime.now()
         opt.end = dt_to_date(opt.end_dt, DT_FORMAT)
         opt.start_dt = date_to_dt(opt.end, DT_FORMAT) - duration
@@ -144,9 +151,9 @@ def process_opts(opt):
         opt.start_dt = datetime.date(1970, 1, 1)
         opt.start = opt.start_dt.strftime(DT_FORMAT)
 
-    
-    if not opt.start:
-        kwargs = {'from_date': opt.start, 'to_date': opt.end, **kwargs}
+    if opt.active_directory:
+        # Resolve uid to realname in Active Directory
+        kwargs = {'active_directory': True, **kwargs}
 
     return kwargs
 
@@ -182,10 +189,10 @@ def dt_to_date(dateasdt, FORMAT):
 
 
 def main(args=None):
+    """Start of main function"""
     opt = cmd_args(args)
     kwargs = process_opts(opt)
     df = readfile_to_dataframe(**kwargs)
-
     # Select observations between two datetimes
     if opt.start:
         df_sub = df.loc[opt.start:opt.end].copy()
@@ -193,7 +200,9 @@ def main(args=None):
         df_sub = df  # or use the whole dataset
 
     # Enable for AD lookup of User's real name
-    # df_sub.User = df_sub.apply(lambda row: simple_user(row.User), axis=1)
+    if kwargs.get('active_directory'):
+        df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
+
 
     # Unique users in time range
     print(df_sub.User.unique())
