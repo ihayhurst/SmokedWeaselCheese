@@ -5,6 +5,8 @@ Visualise license checkouts, counts, denials etc. from several propriatory licen
 Read the log file in Pass  to Parse, spit out a generator
 Read generator lines into dataframe, find checkin events for each checkout, analyse, visualise
 
+![Log analysis Output](./MAY-loganalysis-USER.png?raw=true "May log analysis")
+
 * stardrop-vis.py for Log in the form of: 
 
   > LOG:8charhashUsername#Action_Type#number#Date Time
