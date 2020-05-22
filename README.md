@@ -38,8 +38,22 @@ Read generator lines into dataframe, find checkin events for each checkout, anal
   > 15:14:33 (ACME) IN: "FAKE_TUNNEL" meepmeep@CHCAL5CG6457133  
 
 
-> `usage: Prepares license log for datamining. [-h] [-i HINT] [-s START] [-e END] [-d DUR] filename`  
+> usage: Prepares license log for datamining. [-h] [-i HINT] [-s START] [-e END] [-d DUR] [-a] filename
+> 
+> positional arguments:
+>   filename              path/filename of logfile to file to parse
+> 
+> optional arguments:
+>   -h, --help            show this help message and exit
+>   -i HINT, --hint HINT  Hint start date of the log YYYY-MM-DD
+>   -s START, --start START
+>                         Start date YYYY-MM-DDTHH:MM e.g 2020-03-23T13:24
+>   -e END, --end END     End date YYYY-MM-DDTHH:MM
+>   -d DUR, --dur DUR     Duration: Hours, Days, Weeks, e.g. 2W for 2 weeks
+>   -a, --Active-Directory
+>                         Resolve user ID to real name in Active Directory
 
+![Alt text](MAY-loganalysis-USER.png?raw=true "May log analysis")
 > `positional arguments:`
 > `filename              path/filename of logfile to file to parse`  
 
