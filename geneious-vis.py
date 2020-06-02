@@ -266,7 +266,6 @@ def main(args=None):
     x = df_sub_out.Date.value_counts().sub(df_sub_in.Date.value_counts(), fill_value=0)
     x.iloc[0] = 0
     loans = x.cumsum()
-    print(loans)
 
     # Events table: For every checkout get checkin; calculate the loan duration
     events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Duration', 'User', 'Host'])
@@ -303,10 +302,15 @@ def main(args=None):
     users_overtime = events[events.Duration  >= lazy_logins]
     print('Number of occasions users session goes over 9 Hours')
     print(users_overtime[['User', 'Duration']].groupby(['User'])['Duration'].agg(['count']).sort_values(['count'], ascending=False))
-
-    print(events.groupby(['Host'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
-    print(events.groupby('Host')['User'].nunique())
-    #grp = events.groupby(['Host', 'User'])['Host'].unique().unstack('Host')
+    #print(events.groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
+    
+    df_agg = events[['User', 'Duration', 'Host']].groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False)
+    df_agg.columns=df_agg.columns.str.strip()
+    df_agg = df_agg.sort_values(by=['Host', 'sum'],  ascending=False)
+    df_agg.to_csv('siteusers.csv', encoding='utf8')
+    print('Number of users by site')
+    print(events.groupby('Host')['User'].nunique().sort_values(ascending=False))
+    #grp = events.groupby(['Host', 'User'])['Host']unique().unstack('Host')
     #grp = grp.T
     #print(grp)
 
