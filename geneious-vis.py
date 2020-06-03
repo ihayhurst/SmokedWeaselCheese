@@ -302,17 +302,15 @@ def main(args=None):
     users_overtime = events[events.Duration  >= lazy_logins]
     print('Number of occasions users session goes over 9 Hours')
     print(users_overtime[['User', 'Duration']].groupby(['User'])['Duration'].agg(['count']).sort_values(['count'], ascending=False))
-    #print(events.groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False))
     
+    # Output CSV of top users by site
     df_agg = events[['User', 'Duration', 'Host']].groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False)
     df_agg.columns=df_agg.columns.str.strip()
     df_agg = df_agg.sort_values(by=['Host', 'sum'],  ascending=False)
     df_agg.to_csv('siteusers.csv', encoding='utf8')
+
     print('Number of users by site')
     print(events.groupby('Host')['User'].nunique().sort_values(ascending=False))
-    #grp = events.groupby(['Host', 'User'])['Host']unique().unstack('Host')
-    #grp = grp.T
-    #print(grp)
 
     graph(events, df_sub_ref, loans)
 
