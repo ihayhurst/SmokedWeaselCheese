@@ -259,13 +259,15 @@ def main(args=None):
     #print(loans)
 
     # Events table: For every checkout get checkin; calculate the loan duration
-    events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Module', 'Duration', 'User'])
+    events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Module', 'Duration', 'User', 'Host'])
     t = time.process_time()
     for row in df_sub_out.itertuples():
         index = getattr(row, 'Index')
         user = getattr(row, 'User')
         out_time = getattr(row, 'Date')
         module = getattr(row, 'Module')
+        host = getattr(row, 'Host')
+
         # print(f'index={index} user={user}, Out Time={out_time}')
         if not len(events)%1000:
             print(f'{len(events)} : {time.process_time()- t}')
@@ -276,7 +278,7 @@ def main(args=None):
                    & (df_sub_in.index >= index))
             result = df_sub_in.loc[key]
             events.loc[len(events), :] = (out_time, (result.Date.iloc[0]), module,
-                                          (result.Date.iloc[0] - out_time), user)
+                                          (result.Date.iloc[0] - out_time), user, host)
         except IndexError:
             print(f'No MATCH! {row}')
         else:
@@ -285,6 +287,20 @@ def main(args=None):
     events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
     events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
     events['Duration'] = pd.to_timedelta(events['Duration'])
+
+    # Truncate Host to 4 chars making them CAPS
+    events.Host = events.Host.str.slice(0, 4)
+    events.Host = events.Host.str.upper()
+
+    # Sort by Site #comment to show as a duration curve
+    events.sort_values(by=['Host'], inplace=True)
+
+     # Output CSV of top users by site
+    df_agg = events[['User', 'Duration', 'Host']].groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False)
+    df_agg.columns=df_agg.columns.str.strip()
+    df_agg = df_agg.sort_values(by=['Host', 'sum'],  ascending=False)
+    df_agg.to_csv('siteusers.csv', encoding='utf8')
+
     # Checkouts per module and duration
     print(events.groupby(['Module'])['Duration'].agg(['sum', 'count']).sort_values(['sum'], ascending=False))
     print(events)
