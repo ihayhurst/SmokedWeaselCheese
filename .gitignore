@@ -2,3 +2,8 @@ jh-sls-usage.log
 stein-sls-usage.log
 sls-usage.log
 geneiouslm.log
+ADlookup.py
+__pycache__/
+.vscode/settings.json
+siteusers.csv
+rlm.dl
