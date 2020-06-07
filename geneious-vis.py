@@ -24,33 +24,32 @@ def log_parse(original_log, **kwargs):
     grabbag = ['IN:', 'OUT:', 'DENIED:', 'QUEUED:', 'DEQUEUED:']
     if kwargs.get('hint'):
         current_date = datetime.date.fromisoformat(kwargs.get('hint'))
-        for line in original_log:
-            data = line.split()
-            if len(data) < 4:
-           
-                continue
+    for line in original_log:
+        data = line.split()
+        if len(data) < 4:
+            continue
 
-            try:
-                # Do we have a TIMESTAMP, if we do and it's newer then use it
-                if data[2] == "TIMESTAMP":
-                    new_date = datetime.datetime.strptime(data[3], "%m/%d/%Y").date()
-                    # If it hasn't changed then value of current_date is OK
-                    if new_date == current_date:
-                        pass
-                    else:
-                        # if it has changed, then that's the new value of current_date
-                        current_date = new_date
-                        continue
-            except IndexError:
-                continue
+        try:
+            # Do we have a TIMESTAMP, if we do and it's newer then use it
+            if data[2] == "TIMESTAMP":
+                new_date = datetime.datetime.strptime(data[3], "%m/%d/%Y").date()
+                # If it hasn't changed then value of current_date is OK
+                if new_date == current_date:
+                    pass
+                else:
+                    # if it has changed, then that's the new value of current_date
+                    current_date = new_date
+                    continue
+        except IndexError:
+            continue
 
-            if [i for i in grabbag if i in data[2]]:
-                record_date = current_date.strftime("%Y-%m-%d")
-                data = f'{record_date} ' + " ".join(re.split(r'\s+|@|\.', line))
-                data = data.split(maxsplit=7)
-                yield data
-            else:
-                continue
+        if [i for i in grabbag if i in data[2]]:
+            record_date = current_date.strftime("%Y-%m-%d")
+            data = f'{record_date} ' + " ".join(re.split(r'\s+|@|\.', line))
+            data = data.split(maxsplit=7)
+            yield data
+        else:
+            continue
 
 
 def readfile_to_dataframe(**kwargs):
@@ -58,7 +57,6 @@ def readfile_to_dataframe(**kwargs):
     filename = kwargs.get('filename')
     with open(filename, 'rt', encoding='utf-8', errors='ignore')as f:
         original_log = f.readlines()
-        #original_log = filter(None, (line.rstrip() for line in f))
         lines_we_keep = list(log_parse(original_log, **kwargs))
         columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'User', 'Host', 'State']
         discard_cols = ['Time', 'Product', 'Module', 'State']
@@ -270,7 +268,8 @@ def main(args=None):
         out_time = row.Date
         host = row.Host
         try:
-            key = ((df_sub_in.User == user) & (df_sub_in.index >= index))
+            key = ((df_sub_in.User == user)
+                   & (df_sub_in.index >= index))
             result = df_sub_in.loc[key]
             events.loc[len(events), :] = (out_time, (result.Date.iloc[0]),
                                           (result.Date.iloc[0] - out_time), user, host)
@@ -295,14 +294,14 @@ def main(args=None):
 
     # Find users that forget to log out
     lazy_logins = parse_duration('9H')
-    users_overtime = events[events.Duration  >= lazy_logins]
+    users_overtime = events[events.Duration >= lazy_logins]
     print('Number of occasions users session goes over 9 Hours')
     print(users_overtime[['User', 'Duration']].groupby(['User'])['Duration'].agg(['count']).sort_values(['count'], ascending=False))
-    
+
     # Output CSV of top users by site
     df_agg = events[['User', 'Duration', 'Host']].groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False)
-    df_agg.columns=df_agg.columns.str.strip()
-    df_agg = df_agg.sort_values(by=['Host', 'sum'],  ascending=False)
+    df_agg.columns = df_agg.columns.str.strip()
+    df_agg = df_agg.sort_values(by=['Host', 'sum'], ascending=False)
     df_agg.to_csv('siteusers.csv', encoding='utf8')
 
     print('Number of users by site')

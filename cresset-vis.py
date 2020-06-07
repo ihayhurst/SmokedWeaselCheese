@@ -18,7 +18,7 @@ import seaborn as sns
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
 
-def log_parse(original_log, **kwargs):
+def log_parse(original_log):
     """Take logfile and add date to every time.
     Keep only the events we're interested in """
     grabbag = ['IN:', 'OUT:']
@@ -38,9 +38,8 @@ def readfile_to_dataframe(**kwargs):
     """Read in file, return dataframe"""
     filename = kwargs.get('filename')
     with open(filename, 'rt', encoding='utf-8', errors='ignore')as f:
-        original_log = filter(None, (line.rstrip() for line in f))
+        original_log = f.readlines()
         lines_we_keep = list(log_parse(original_log, **kwargs))
-
         columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'Version', 'prep', 'User@Host']
         discard_cols = ['Time', 'Product', 'prep']
         df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
@@ -222,7 +221,6 @@ def main(args=None):
     opt = cmd_args(args)
     kwargs = process_opts(opt)
     df = readfile_to_dataframe(**kwargs)
-    print(df.head())
      # Select observations between two datetimes
     if opt.start:
         df_sub = df.loc[opt.start:opt.end].copy()
@@ -233,9 +231,8 @@ def main(args=None):
     if kwargs.get('active_directory'):
         df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
-    #print(df_sub['Tokens'])
-
     # Unique users in time range
+    print('Unique Users')
     print(df_sub.User.unique())
 
     # Make collection of token library
@@ -270,9 +267,9 @@ def main(args=None):
             print(f'{len(events)} : {time.process_time()- t}')
 
         try:
-            key = ((df_sub_in.Module == module)
-                   & (df_sub_in.User == user)
-                   & (df_sub_in.index >= index))
+            key = ((df_sub_in.User == user)
+                   & (df_sub_in.index >= index)
+                   & (df_sub_in.Module == module))
             result = df_sub_in.loc[key]
             events.loc[len(events), :] = (out_time, (result.Date.iloc[0]), module,
                                           (result.Date.iloc[0] - out_time), user, host)
@@ -289,14 +286,17 @@ def main(args=None):
     events.Host = events.Host.str.slice(0, 4)
     events.Host = events.Host.str.upper()
 
-    # Sort by Site #comment to show as a duration curve
+    # Sort by Site (else graph is by login time)
     events.sort_values(by=['Host'], inplace=True)
 
      # Output CSV of top users by site
     df_agg = events[['User', 'Duration', 'Host']].groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False)
-    df_agg.columns=df_agg.columns.str.strip()
-    df_agg = df_agg.sort_values(by=['Host', 'sum'],  ascending=False)
+    df_agg.columns = df_agg.columns.str.strip()
+    df_agg = df_agg.sort_values(by=['Host', 'sum'], ascending=False)
     df_agg.to_csv('siteusers.csv', encoding='utf8')
+
+    print('Number of users by site')
+    print(events.groupby('Host')['User'].nunique().sort_values(ascending=False))
 
     # Checkouts per module and duration
     print(events.groupby(['Module'])['Duration'].agg(['sum', 'count']).sort_values(['sum'], ascending=False))
