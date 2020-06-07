@@ -21,14 +21,13 @@ DT_FORMAT = '%Y-%m-%dT%H:%M'
 def log_parse(original_log, **kwargs):
     """Take logfile and add date to every time.
     Keep only the events we're interested in """
+    grabbag = ['IN:', 'OUT:', 'DENIED:', 'QUEUED:', 'DEQUEUED:']
     if kwargs.get('hint'):
         current_date = datetime.date.fromisoformat(kwargs.get('hint'))
         for line in original_log:
             data = line.split()
-            try:
-                if len(data) > 3:
-                    pass
-            except IndexError:
+            if len(data) < 4:
+           
                 continue
 
             try:
@@ -45,18 +44,13 @@ def log_parse(original_log, **kwargs):
             except IndexError:
                 continue
 
-            grabbag = ['IN:', 'OUT:', 'DENIED:', 'QUEUED:', 'DEQUEUED:']
             if [i for i in grabbag if i in data[2]]:
-                if re.findall("lmgrd", data[1]):
-                    continue # skip flexlm housekeeping
-
                 record_date = current_date.strftime("%Y-%m-%d")
                 data = f'{record_date} ' + " ".join(re.split(r'\s+|@|\.', line))
                 data = data.split(maxsplit=7)
+                yield data
             else:
                 continue
-
-            yield data
 
 
 def readfile_to_dataframe(**kwargs):
@@ -64,6 +58,7 @@ def readfile_to_dataframe(**kwargs):
     filename = kwargs.get('filename')
     with open(filename, 'rt', encoding='utf-8', errors='ignore')as f:
         original_log = f.readlines()
+        #original_log = filter(None, (line.rstrip() for line in f))
         lines_we_keep = list(log_parse(original_log, **kwargs))
         columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'User', 'Host', 'State']
         discard_cols = ['Time', 'Product', 'Module', 'State']
@@ -206,6 +201,7 @@ def process_opts(opt):
         kwargs = {'active_directory': True, **kwargs}
 
     return kwargs
+
 
 def parse_duration(duration):
     """Parse duration Hours,Days or Weeks Return timedelta"""

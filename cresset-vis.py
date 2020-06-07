@@ -24,14 +24,11 @@ def log_parse(original_log, **kwargs):
     grabbag = ['IN:', 'OUT:']
     for line in original_log:
         line = line.replace('(client exit) ', '')
-        #data = re.split(r's\+|@|\.', line)
         data = line.split()
         if len(data) < 4:
             continue
-        #print(f'read {len(data)}: {data} ')
-        #print(f'data[3] ={data[3]}')
+
         if [i for i in grabbag if i in data[3]]:
-            #print(data)
             yield data
         else:
             continue
