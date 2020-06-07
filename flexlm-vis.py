@@ -21,52 +21,45 @@ DT_FORMAT = '%Y-%m-%dT%H:%M'
 def log_parse(original_log, **kwargs):
     """Take logfile and add date to every time.
     Keep only the events we're interested in """
+    grabbag = ['IN:', 'OUT:', 'DENIED:', 'QUEUED:', 'DEQUEUED:']
+
     if kwargs.get('hint'):
         current_date = datetime.date.fromisoformat(kwargs.get('hint'))
-        for line in original_log:
-            data = line.split()
-            try:
-                if len(data) > 3:
+    for line in original_log:
+        data = line.split()
+        if len(data) <4:
+            continue
+
+        try:
+            # Do we have a TIMESTAMP, if we do and it's newer then use it
+            if data[2] == "TIMESTAMP":
+                new_date = datetime.datetime.strptime(data[3], "%m/%d/%Y").date()
+                # If it hasn't changed then value of current_date is OK
+                if new_date == current_date:
                     pass
-            except IndexError:
-                continue
-
-            try:
-                # Do we have a TIMESTAMP, if we do and it's newer then use it
-                if data[2] == "TIMESTAMP":
-                    new_date = datetime.datetime.strptime(data[3], "%m/%d/%Y").date()
-                    # If it hasn't changed then value of current_date is OK
-                    if new_date == current_date:
-                        pass
-                    else:
-                        # if it has changed, then that's the new value of current_date
-                        current_date = new_date
-                        continue
-            except IndexError:
-                continue
-            token_value = re.compile(r"(?:\s+\((\d+)?\slicenses\))")
-            #token_value = re.compile(r"\s+\((\d+)?\slicenses\)")
-            grabbag = ['IN:', 'OUT:', 'DENIED:', 'QUEUED:', 'DEQUEUED:']
-            if [i for i in grabbag if i in data[2]]:
-                if re.findall("lmgrd", data[1]):
-                    continue # skip flexlm housekeeping
-                #if re.findall("SUITE.*|MSI.*|License_Holder", data[3]):
-                    #continue # skip the Token Library
-              
-                record_date = current_date.strftime("%Y-%m-%d")
-                data = f'{record_date} ' + " ".join(re.split(r'\s+|@|\.', line))
-                data = data.split(maxsplit=7)
-                if len(data) == 8:
-                    if (match := re.search(token_value, data[7])) is not None:
-                        data[7] =int(match.group(1))
-                    else:
-                        data[7] = 1
                 else:
-                    data.append(1)
-            else:
-                continue
+                    # if it has changed, then that's the new value of current_date
+                    current_date = new_date
+                    continue
+        except IndexError:
+            continue
 
+        token_value = re.compile(r"(?:\s+\((\d+)?\slicenses\))")
+
+        if [i for i in grabbag if i in data[2]]:
+            record_date = current_date.strftime("%Y-%m-%d")
+            data = f'{record_date} ' + " ".join(re.split(r'\s+|@|\.', line))
+            data = data.split(maxsplit=7)
+            if len(data) == 8:
+                if (match := re.search(token_value, data[7])) is not None:
+                    data[7] =int(match.group(1))
+                else:
+                    data[7] = 1
+            else:
+                data.append(1)
             yield data
+        else:
+            continue
 
 
 def readfile_to_dataframe(**kwargs):
