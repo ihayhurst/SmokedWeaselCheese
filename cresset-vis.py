@@ -39,7 +39,7 @@ def readfile_to_dataframe(**kwargs):
     filename = kwargs.get('filename')
     with open(filename, 'rt', encoding='utf-8', errors='ignore')as f:
         original_log = f.readlines()
-        lines_we_keep = list(log_parse(original_log, **kwargs))
+        lines_we_keep = list(log_parse(original_log))
         columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'Version', 'prep', 'User@Host']
         discard_cols = ['Time', 'Product', 'prep']
         df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
