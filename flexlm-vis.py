@@ -27,7 +27,7 @@ def log_parse(original_log, **kwargs):
         current_date = datetime.date.fromisoformat(kwargs.get('hint'))
     for line in original_log:
         data = line.split()
-        if len(data) <4:
+        if len(data) < 4:
             continue
 
         try:
@@ -108,7 +108,7 @@ def graph(events, df_sub_ref, loans):
     axes[1].set(ylim=(0, 80))
     axes[1].set_ylabel('Token Library')
     axes[1].grid(which='major', axis='x', alpha=0.5)
-    loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True,)
+    loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True)
     fig.tight_layout()
     plt.show()
 
@@ -210,6 +210,7 @@ def process_opts(opt):
 
     return kwargs
 
+
 def parse_duration(duration):
     """Parse duration Hours,Days or Weeks Return timedelta"""
     hours = datetime.timedelta(hours=1)
@@ -259,6 +260,7 @@ def main(args=None):
     print(df_sub['Tokens'])
 
     # Unique users in time range
+    print('Unique Users')
     print(df_sub.User.unique())
     # Make collection of token library
     token_tally = df_sub[df_sub['Module'].str.contains('SUITE_')]
@@ -289,9 +291,9 @@ def main(args=None):
             print(f'{len(events)} : {time.process_time()- t}')
 
         try:
-            key = ((df_sub_in.Module == module)
-                   & (df_sub_in.User == user)
-                   & (df_sub_in.index >= index))
+            key = ((df_sub_in.User == user)
+                   & (df_sub_in.index >= index)
+                   & (df_sub_in.Module == module))
             result = df_sub_in.loc[key]
             events.loc[len(events), :] = (out_time, (result.Date.iloc[0]), module,
                                           (result.Date.iloc[0] - out_time), user)
