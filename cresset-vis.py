@@ -41,7 +41,7 @@ def readfile_to_dataframe(**kwargs):
         original_log = f.readlines()
         lines_we_keep = list(log_parse(original_log))
         columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'Version', 'prep', 'User@Host']
-        discard_cols = ['Time', 'Product', 'prep']
+        discard_cols = ['Time', 'Product', 'prep', 'User@Host']
         df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
         #fix quirks
         df.Date = '2020/' + df.Date.astype(str)
