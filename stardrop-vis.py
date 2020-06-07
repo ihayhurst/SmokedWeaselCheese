@@ -29,11 +29,9 @@ def log_parse(original_log):
         data[0] = data[0][12:]  # LOG:stuffffUSERNAME username occurs 12 chars
 
         if [i for i in grabbag if i in data[1]]:
-            pass
+            yield data
         else:
             continue
-
-        yield data
 
 
 def readfile_to_dataframe(**kwargs):
@@ -46,7 +44,7 @@ def readfile_to_dataframe(**kwargs):
         df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
         df['Date'] = pd.to_datetime(df['Date'])
         df = df.set_index(df['Date'])
-        return df
+    return df
 
 
 def graph(events, df_sub_ref):
@@ -152,6 +150,7 @@ def process_opts(opt):
 
     return kwargs
 
+
 def parse_duration(duration):
     """Parse duration Hours,Days or Weeks Return timedelta"""
     hours = datetime.timedelta(hours=1)
@@ -215,7 +214,8 @@ def main(args=None):
         user = row.User
         out_time = row.Date
         try:
-            key = ((df_sub_in.User == user) & (df_sub_in.index >= index))
+            key = ((df_sub_in.User == user)
+                   & (df_sub_in.index >= index))
             result = df_sub_in.loc[key]
             events.loc[len(events), :] = (out_time, (result.Date.iloc[0]),
                                          (result.Date.iloc[0] - out_time), user)
