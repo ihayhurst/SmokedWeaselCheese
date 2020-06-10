@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
-# import ADlookup as ad
+import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
@@ -248,7 +248,7 @@ def main(args=None):
         df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
-    print('Unique Users')
+    print('==Unique Users==')
     print(df_sub.User.unique())
 
     # Split Checkout and checkin events: record refusals too
@@ -286,8 +286,9 @@ def main(args=None):
     events.Host = events.Host.str.slice(0, 4)
     events.Host = events.Host.str.upper()
 
-    # Convert Ken's machines to GBJH
+    # Convert Ken's machines to GBJH and Shimaa Sharkawy to GBEX
     events.replace(to_replace=r'(LOVE|BUFF|SPIK)', value='GBJH', regex=True, inplace=True)
+    events.replace(to_replace=r'SHAR', value='GBEX', regex=True, inplace=True)
 
     # Sort by Site (else graph is by login time)
     events.sort_values(by=['Host'], inplace=True)
@@ -295,16 +296,17 @@ def main(args=None):
     # Find users that forget to log out
     lazy_logins = parse_duration('9H')
     users_overtime = events[events.Duration >= lazy_logins]
-    print('Number of occasions users session goes over 9 Hours')
+    print('==Number of occasions users session goes over 9 Hours==')
     print(users_overtime[['User', 'Duration']].groupby(['User'])['Duration'].agg(['count']).sort_values(['count'], ascending=False))
 
     # Output CSV of top users by site
+    print('==Top users checkout duration by site== output as "Geneious-siteusers.csv"')
     df_agg = events[['User', 'Duration', 'Host']].groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False)
     df_agg.columns = df_agg.columns.str.strip()
     df_agg = df_agg.sort_values(by=['Host', 'sum'], ascending=False)
-    df_agg.to_csv('siteusers.csv', encoding='utf8')
+    df_agg.to_csv('Geneious-siteusers.csv', encoding='utf8')
 
-    print('Number of users by site')
+    print('==Number of users by site==')
     print(events.groupby('Host')['User'].nunique().sort_values(ascending=False))
 
     graph(events, df_sub_ref, loans)

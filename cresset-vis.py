@@ -13,7 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
-#import ADlookup as ad
+import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = '%Y-%m-%dT%H:%M'
 
@@ -75,7 +75,7 @@ def graph(events, df_sub_ref):
     axes[0].legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
     axes[0].hlines(labels, date2num(events.LicOut),
                    date2num(events.LicIn),
-                   linewidth=6, color=events.Module.map(color_map))
+                   linewidth=6, color=events.Module.map(color_map), alpha=0.3)
     axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'kx', linewidth=10)
 
     #loan_color = 'tab:green'
@@ -232,7 +232,7 @@ def main(args=None):
         df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
-    print('Unique Users')
+    print('==Unique Users==')
     print(df_sub.User.unique())
 
     # Make collection of token library
@@ -253,7 +253,7 @@ def main(args=None):
     #print(loans)
 
     # Events table: For every checkout get checkin; calculate the loan duration
-    events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Module', 'Duration', 'User', 'Host'])
+    events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Module', 'Version', 'Duration', 'User', 'Host'])
     t = time.process_time()
     for row in df_sub_out.itertuples():
         index = getattr(row, 'Index')
@@ -261,6 +261,7 @@ def main(args=None):
         out_time = getattr(row, 'Date')
         module = getattr(row, 'Module')
         host = getattr(row, 'Host')
+        version = getattr(row, 'Version')
 
         # print(f'index={index} user={user}, Out Time={out_time}')
         if not len(events)%1000:
@@ -271,7 +272,7 @@ def main(args=None):
                    & (df_sub_in.index >= index)
                    & (df_sub_in.Module == module))
             result = df_sub_in.loc[key]
-            events.loc[len(events), :] = (out_time, (result.Date.iloc[0]), module,
+            events.loc[len(events), :] = (out_time, (result.Date.iloc[0]), module, version,
                                           (result.Date.iloc[0] - out_time), user, host)
         except IndexError:
             print(f'No MATCH! {row}')
@@ -290,17 +291,25 @@ def main(args=None):
     events.sort_values(by=['Host'], inplace=True)
 
      # Output CSV of top users by site
+    print('==Top users checkout checkout duration by Site==')
+    print('--Output as CSV file "Cresset-siteusers.csv"--')
     df_agg = events[['User', 'Duration', 'Host']].groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False)
     df_agg.columns = df_agg.columns.str.strip()
     df_agg = df_agg.sort_values(by=['Host', 'sum'], ascending=False)
-    df_agg.to_csv('siteusers.csv', encoding='utf8')
+    df_agg.to_csv('Cresset-siteusers.csv', encoding='utf8')
 
-    print('Number of users by site')
+    print('==Number of users by site==')
     print(events.groupby('Host')['User'].nunique().sort_values(ascending=False))
 
     # Checkouts per module and duration
-    print(events.groupby(['Module'])['Duration'].agg(['sum', 'count']).sort_values(['sum'], ascending=False))
-    print(events)
+    print('==Sum of Checkouts total duration per module==')
+    print(events.groupby(['Module','Version'])['Duration'].agg(['sum', 'count']).sort_values(['sum'], ascending=False))
+
+    df_modules = events[['User', 'Duration', 'Module', 'Version']].groupby(['Module', 'Version'])['User'].unique()
+    #df_modules.columns = df_modules.columns.str.strip()
+    #df_modules = df_modules.sort_values(by=['Host', 'sum'], ascending=False)
+    df_modules.to_csv('Cresset-modules.csv', encoding='utf8')
+
     graph(events, df_sub_ref)
 
 
