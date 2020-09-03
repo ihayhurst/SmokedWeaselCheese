@@ -248,6 +248,7 @@ def main(args=None):
         df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
+    print(f'==Number of users: {df_sub.User.nunique()} ==')
     print('==Unique Users==')
     print(df_sub.User.unique())
 
@@ -274,7 +275,7 @@ def main(args=None):
             events.loc[len(events), :] = (out_time, (result.Date.iloc[0]),
                                           (result.Date.iloc[0] - out_time), user, host)
         except IndexError:
-            print(f'No MATCH! {row}')
+            print(f'No MATCH! {row.to_string()}')
         else:
             pass
 
@@ -286,17 +287,18 @@ def main(args=None):
     events.Host = events.Host.str.slice(0, 4)
     events.Host = events.Host.str.upper()
 
-    # Convert Ken's machines to GBJH and Shimaa Sharkawy to GBEX
+    # Convert Ken's machines to GBJH
     events.replace(to_replace=r'(LOVE|BUFF|SPIK)', value='GBJH', regex=True, inplace=True)
-    events.replace(to_replace=r'SHAR', value='GBEX', regex=True, inplace=True)
+    # Convert  Shimaa Sharkawy, Rana Abdelkader Salma Yassin, Hoda Kassin to GBEX
+    events.replace(to_replace=r'(SHAR|ABDE|YASS|KASS)', value='GBEX', regex=True, inplace=True)
 
     # Sort by Site (else graph is by login time)
     events.sort_values(by=['Host'], inplace=True)
 
     # Find users that forget to log out
-    lazy_logins = parse_duration('9H')
+    lazy_logins = parse_duration('12H')
     users_overtime = events[events.Duration >= lazy_logins]
-    print('==Number of occasions users session goes over 9 Hours==')
+    print(f'==Number of occasions users session goes over {lazy_logins} Hours==')
     print(users_overtime[['User', 'Duration']].groupby(['User'])['Duration'].agg(['count']).sort_values(['count'], ascending=False))
 
     # Output CSV of top users by site
@@ -307,7 +309,7 @@ def main(args=None):
     df_agg.to_csv('Geneious-siteusers.csv', encoding='utf8')
 
     print('==Number of users by site==')
-    print(events.groupby('Host')['User'].nunique().sort_values(ascending=False))
+    print(events.groupby('Host')['User'].nunique().sort_values(ascending=False).to_string())
 
     graph(events, df_sub_ref, loans)
 
