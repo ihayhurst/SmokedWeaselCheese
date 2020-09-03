@@ -221,17 +221,28 @@ def main(args=None):
     opt = cmd_args(args)
     kwargs = process_opts(opt)
     df = readfile_to_dataframe(**kwargs)
-     # Select observations between two datetimes
+    # Select observations between two datetimes
     if opt.start:
         df_sub = df.loc[opt.start:opt.end].copy()
     else:
         df_sub = df  # or use the whole dataset
+
+    #filter for specific users
+    """
+    user_set = ['jsmith', 
+                'jdoe',
+                'fblogs',
+                'mreman',
+                'djones']
+    df_sub = df_sub[df_sub['User'].isin(user_set)]
+    """
 
     # Enable for AD lookup of User's real name
     if kwargs.get('active_directory'):
         df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
+    print(f'==Number of users: {df_sub.User.nunique()} ==')
     print('==Unique Users==')
     print(df_sub.User.unique())
 
@@ -275,7 +286,7 @@ def main(args=None):
             events.loc[len(events), :] = (out_time, (result.Date.iloc[0]), module, version,
                                           (result.Date.iloc[0] - out_time), user, host)
         except IndexError:
-            print(f'No MATCH! {row}')
+            print(f'No MATCH! {row.to_string()}')
         else:
             pass
 
@@ -291,7 +302,7 @@ def main(args=None):
     events.sort_values(by=['Host'], inplace=True)
 
      # Output CSV of top users by site
-    print('==Top users checkout checkout duration by Site==')
+    print('==Top users checkout duration by Site==')
     print('--Output as CSV file "Cresset-siteusers.csv"--')
     df_agg = events[['User', 'Duration', 'Host']].groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False)
     df_agg.columns = df_agg.columns.str.strip()
@@ -299,15 +310,15 @@ def main(args=None):
     df_agg.to_csv('Cresset-siteusers.csv', encoding='utf8')
 
     print('==Number of users by site==')
-    print(events.groupby('Host')['User'].nunique().sort_values(ascending=False))
+    print(events.groupby('Host')['User'].nunique().sort_values(ascending=False).to_string())
 
     # Checkouts per module and duration
     print('==Sum of Checkouts total duration per module==')
     print(events.groupby(['Module','Version'])['Duration'].agg(['sum', 'count']).sort_values(['sum'], ascending=False))
 
+    print('==Module and Module version use profile (users of modules)==')
+    print('--Output as CSV file "Cresset-modules.csv"--')
     df_modules = events[['User', 'Duration', 'Module', 'Version']].groupby(['Module', 'Version'])['User'].unique()
-    #df_modules.columns = df_modules.columns.str.strip()
-    #df_modules = df_modules.sort_values(by=['Host', 'sum'], ascending=False)
     df_modules.to_csv('Cresset-modules.csv', encoding='utf8')
 
     graph(events, df_sub_ref)
