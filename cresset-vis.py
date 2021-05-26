@@ -14,16 +14,17 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
 import ADlookup as ad
+
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
-DT_FORMAT = '%Y-%m-%dT%H:%M'
+DT_FORMAT = "%Y-%m-%dT%H:%M"
 
 
 def log_parse(original_log):
     """Take logfile and add date to every time.
-    Keep only the events we're interested in """
-    grabbag = ['IN:', 'OUT:']
+    Keep only the events we're interested in"""
+    grabbag = ["IN:", "OUT:"]
     for line in original_log:
-        line = line.replace('(client exit) ', '')
+        line = line.replace("(client exit) ", "")
         data = line.split()
         if len(data) < 4:
             continue
@@ -36,88 +37,125 @@ def log_parse(original_log):
 
 def readfile_to_dataframe(**kwargs):
     """Read in file, return dataframe"""
-    filename = kwargs.get('filename')
-    with open(filename, 'rt', encoding='utf-8', errors='ignore')as f:
+    filename = kwargs.get("filename")
+    with open(filename, "rt", encoding="utf-8", errors="ignore") as f:
         original_log = f.readlines()
         lines_we_keep = list(log_parse(original_log))
-        columns_read = ['Date', 'Time', 'Product', 'Action', 'Module', 'Version', 'prep', 'User@Host']
-        discard_cols = ['Time', 'Product', 'prep', 'User@Host']
+        columns_read = [
+            "Date",
+            "Time",
+            "Product",
+            "Action",
+            "Module",
+            "Version",
+            "prep",
+            "User@Host",
+        ]
+        discard_cols = ["Time", "Product", "prep", "User@Host"]
         df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
-        #fix quirks
-        df.Date = '2020/' + df.Date.astype(str)
-        df['User'], df['Host'] = df['User@Host'].str.split('@', 1).str
-        df['Date'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
+        # fix quirks
+        df.Date = "2021/" + df.Date.astype(str)
+        df[["User", "Host"]] = df["User@Host"].str.split("@", n=1, expand=True)
+        df["Date"] = pd.to_datetime(df["Date"] + " " + df["Time"])
         df.drop(list(discard_cols), axis=1, inplace=True)
-        df = df.set_index(df['Date'])
+        df = df.set_index(df["Date"])
     return df
 
 
 def graph(events, df_sub_ref):
     """Draw graph of license use duration per user on timeline
-        plot time license unavailable as red x"""
+    plot time license unavailable as red x"""
     color_labels = events.Module.unique()
     rgb_values = sns.color_palette("Paired", len(color_labels))
     color_map = dict(zip(color_labels, rgb_values))
-    labels = events['User']
+    labels = events["User"]
     fig, axes = plt.subplots(2, 1, sharex=True, figsize=(16, 10))
     fig.autofmt_xdate()
     axes[0] = plt.subplot2grid((6, 1), (0, 0), rowspan=5)
-    #axes[1] = plt.subplot2grid((6, 1), (5, 0), rowspan=1, sharex=axes[0])
-    color = 'tab:blue'
-    axes[0].grid(which='major', axis='x')
-    axes[0].tick_params(axis='both', which='major', labelsize=6)
-    axes[0].tick_params(axis='both', which='minor', labelsize=6)
-    axes[0].set_ylabel('Users', color=color)
+    # axes[1] = plt.subplot2grid((6, 1), (5, 0), rowspan=1, sharex=axes[0])
+    color = "tab:blue"
+    axes[0].grid(which="major", axis="x")
+    axes[0].tick_params(axis="both", which="major", labelsize=6)
+    axes[0].tick_params(axis="both", which="minor", labelsize=6)
+    axes[0].set_ylabel("Users", color=color)
     axes[0].spines["right"].set_position(("axes", 1))
     axes[0].xaxis_date()
-    patches = [plt.plot([], [], marker="o", ms=10, ls="", mec=None, color=rgb_values[i],
-                        label="{:s}".format(color_labels[i]))[0]  for i in range(len(color_labels))]
-    axes[0].legend(handles=patches, bbox_to_anchor=(0, 1), loc='upper left')
-    axes[0].hlines(labels, date2num(events.LicOut),
-                   date2num(events.LicIn),
-                   linewidth=6, color=events.Module.map(color_map), alpha=0.3)
-    axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, 'kx', linewidth=10)
+    patches = [
+        plt.plot(
+            [],
+            [],
+            marker="o",
+            ms=10,
+            ls="",
+            mec=None,
+            color=rgb_values[i],
+            label="{:s}".format(color_labels[i]),
+        )[0]
+        for i in range(len(color_labels))
+    ]
+    axes[0].legend(handles=patches, bbox_to_anchor=(0, 1), loc="upper left")
+    axes[0].hlines(
+        labels,
+        date2num(events.LicOut),
+        date2num(events.LicIn),
+        linewidth=6,
+        color=events.Module.map(color_map),
+        alpha=0.8,
+    )
+    axes[0].plot(date2num(df_sub_ref.Date), df_sub_ref.User, "kx", linewidth=10)
 
-    #loan_color = 'tab:green'
-    #axes[1].set(ylim=(0, 80))
-    #axes[1].set_ylabel('Token Library')
-    #axes[1].grid(which='major', axis='x', alpha=0.5)
-    #loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True)
+    # loan_color = 'tab:green'
+    # axes[1].set(ylim=(0, 80))
+    # axes[1].set_ylabel('Token Library')
+    # axes[1].grid(which='major', axis='x', alpha=0.5)
+    # loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True)
     fig.tight_layout()
     plt.show()
 
-
+"""
+# Only with Adtive Directory lookup module
 @functools.lru_cache(maxsize=128, typed=False)
 def simple_user(uid):
-    """ Take a user logon id and return their name """
+    """Take a user logon id and return their name"""
     test1 = ad.AD()
     try:
-        identity = test1.fetch(f'(sAMAccountName={uid})', 'displayName')
+        identity = test1.fetch(f"(sAMAccountName={uid})", "displayName")
     except IndexError:
         # User Not Found, return the original uid
         return uid
-    identity = json.loads(identity)
+     identity = json.loads(identity)
     identity = identity["attributes"]["displayName"][0]
     return identity
-
+"""
 
 def cmd_args(args=None):
     """Prepare commandline arguments return Namespace object of options set"""
     parser = argparse.ArgumentParser("Prepares license log for datamining.")
 
-    parser.add_argument('filename',
-                        help='path/filename of logfile to file to parse')
-    parser.add_argument('-i', '--hint', dest='hint',
-                        help='Hint start date of the log YYYY-MM-DD')
-    parser.add_argument('-s', '--start', dest='start',
-                        help='Start date YYYY-MM-DDTHH:MM e.g 2020-03-23T13:24')
-    parser.add_argument('-e', '--end', dest='end',
-                        help='End   date YYYY-MM-DDTHH:MM')
-    parser.add_argument('-d', '--dur', dest='dur',
-                        help='Duration: Hours, Days, Weeks,  e.g. 2W for 2 weeks')
-    parser.add_argument('-a', '--Active-Directory', dest='active_directory',
-                        action='store_true',
-                        help='Resolve user ID to real name  in Active Directory')
+    parser.add_argument("filename", help="path/filename of logfile to file to parse")
+    parser.add_argument(
+        "-i", "--hint", dest="hint", help="Hint start date of the log YYYY-MM-DD"
+    )
+    parser.add_argument(
+        "-s",
+        "--start",
+        dest="start",
+        help="Start date YYYY-MM-DDTHH:MM e.g 2020-03-23T13:24",
+    )
+    parser.add_argument("-e", "--end", dest="end", help="End   date YYYY-MM-DDTHH:MM")
+    parser.add_argument(
+        "-d",
+        "--dur",
+        dest="dur",
+        help="Duration: Hours, Days, Weeks,  e.g. 2W for 2 weeks",
+    )
+    parser.add_argument(
+        "-a",
+        "--Active-Directory",
+        dest="active_directory",
+        action="store_true",
+        help="Resolve user ID to real name  in Active Directory",
+    )
 
     opt = parser.parse_args(args)
     return opt
@@ -125,14 +163,14 @@ def cmd_args(args=None):
 
 def process_opts(opt):
     """Process cmdline options logic
-        Calculate ROI start and end times from combinations supplied"""
+    Calculate ROI start and end times from combinations supplied"""
     kwargs = {}
-    kwargs = {'filename': opt.filename, **kwargs}
+    kwargs = {"filename": opt.filename, **kwargs}
 
     if opt.dur:
         # If set get timedelta it represents
         duration = parse_duration(opt.dur)
-        print(f'Duration {opt.dur}')
+        print(f"Duration {opt.dur}")
 
     if opt.dur and opt.start and opt.end:
         # Assume start and range ignore end
@@ -176,11 +214,11 @@ def process_opts(opt):
     if opt.hint:
         # Hint is for timestamping log before first timestsmp
         current_date = opt.hint
-        kwargs = {'hint': current_date, **kwargs}
+        kwargs = {"hint": current_date, **kwargs}
 
     if opt.active_directory:
         # Resolve uid to realname in Active Directory
-        kwargs = {'active_directory': True, **kwargs}
+        kwargs = {"active_directory": True, **kwargs}
 
     return kwargs
 
@@ -190,13 +228,13 @@ def parse_duration(duration):
     hours = datetime.timedelta(hours=1)
     days = datetime.timedelta(days=1)
     weeks = datetime.timedelta(weeks=1)
-    fields = re.split(r'(\d+)', duration)
+    fields = re.split(r"(\d+)", duration)
     duration = int(fields[1])
-    if fields[2][:1].upper() == 'H':
+    if fields[2][:1].upper() == "H":
         duration_td = duration * hours
-    elif fields[2][:1].upper() == 'D':
+    elif fields[2][:1].upper() == "D":
         duration_td = duration * days
-    elif fields[2][:1].upper() == 'W':
+    elif fields[2][:1].upper() == "W":
         duration_td = duration * weeks
     else:
         raise ValueError
@@ -216,6 +254,19 @@ def dt_to_date(dateasdt, FORMAT):
     return datestring
 
 
+def date_to_timestamp(datestring, FORMAT):
+    """Convert date string to timestamp"""
+    dateasdt = date_to_dt(datestring, FORMAT)
+    unixtime = dt_to_timestamp(dateasdt)
+    return unixtime
+
+
+def dt_to_timestamp(dateasdt):
+    """Convert datetime obj to unix timestamp"""
+    unixtime = datetime.datetime.timestamp(dateasdt)
+    return unixtime
+
+
 def main(args=None):
     """Start of main function"""
     opt = cmd_args(args)
@@ -223,11 +274,11 @@ def main(args=None):
     df = readfile_to_dataframe(**kwargs)
     # Select observations between two datetimes
     if opt.start:
-        df_sub = df.loc[opt.start:opt.end].copy()
+        df_sub = df.loc[opt.start : opt.end].copy()
     else:
         df_sub = df  # or use the whole dataset
 
-    #filter for specific users
+    # filter for specific users
     """
     user_set = ['jsmith', 
                 'jdoe',
@@ -238,93 +289,122 @@ def main(args=None):
     """
 
     # Enable for AD lookup of User's real name
-    if kwargs.get('active_directory'):
-        df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
+    if kwargs.get("active_directory"):
+        df_sub["User"] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
-    print(f'==Number of users: {df_sub.User.nunique()} ==')
-    print('==Unique Users==')
+    print(f"==Number of users: {df_sub.User.nunique()} ==")
+    print("==Unique Users==")
     print(df_sub.User.unique())
 
     # Make collection of token library
-    #token_tally = df_sub[df_sub['Module'].str.contains('SUITE_')]
+    # token_tally = df_sub[df_sub['Module'].str.contains('SUITE_')]
     # Now purge it from our data
-    #df_sub = df_sub[~df_sub.Module.str.contains('"SUITE_')]
+    # df_sub = df_sub[~df_sub.Module.str.contains('"SUITE_')]
 
     # Split Checkout and checkin events: record refusals too
-    df_sub_out = df_sub[df_sub['Action'] == 'OUT:']
-    df_sub_in = df_sub[df_sub['Action'] == 'IN:']
-    df_sub_ref = df_sub[df_sub['Action'] == 'DENIED:']
+    df_sub_out = df_sub[df_sub["Action"] == "OUT:"]
+    df_sub_in = df_sub[df_sub["Action"] == "IN:"]
+    df_sub_ref = df_sub[df_sub["Action"] == "DENIED:"]
 
     # Cumulative license loan tally
-    #token_out = token_tally[token_tally.Action.str.contains('OUT')]
-    #token_in = token_tally[token_tally.Action.str.contains('IN')]
-    #x = token_out.Tokens.sub(token_in.Tokens, fill_value=0)
-    #loans = x.cumsum()
-    #print(loans)
+    # token_out = token_tally[token_tally.Action.str.contains('OUT')]
+    # token_in = token_tally[token_tally.Action.str.contains('IN')]
+    # x = token_out.Tokens.sub(token_in.Tokens, fill_value=0)
+    # loans = x.cumsum()
+    # print(loans)
 
     # Events table: For every checkout get checkin; calculate the loan duration
-    events = pd.DataFrame(columns=['LicOut', 'LicIn', 'Module', 'Version', 'Duration', 'User', 'Host'])
+    events = pd.DataFrame(
+        columns=["LicOut", "LicIn", "Module", "Version", "Duration", "User", "Host"]
+    )
     t = time.process_time()
     for row in df_sub_out.itertuples():
-        index = getattr(row, 'Index')
-        user = getattr(row, 'User')
-        out_time = getattr(row, 'Date')
-        module = getattr(row, 'Module')
-        host = getattr(row, 'Host')
-        version = getattr(row, 'Version')
+        index = getattr(row, "Index")
+        user = getattr(row, "User")
+        out_time = getattr(row, "Date")
+        module = getattr(row, "Module")
+        host = getattr(row, "Host")
+        version = getattr(row, "Version")
 
         # print(f'index={index} user={user}, Out Time={out_time}')
-        if not len(events)%1000:
-            print(f'{len(events)} : {time.process_time()- t}')
+        if not len(events) % 1000:
+            print(f"{len(events)} : {time.process_time()- t}")
 
         try:
-            key = ((df_sub_in.User == user)
-                   & (df_sub_in.index >= index)
-                   & (df_sub_in.Module == module))
+            key = (
+                (df_sub_in.User == user)
+                & (df_sub_in.index >= index)
+                & (df_sub_in.Module == module)
+            )
             result = df_sub_in.loc[key]
-            events.loc[len(events), :] = (out_time, (result.Date.iloc[0]), module, version,
-                                          (result.Date.iloc[0] - out_time), user, host)
+            events.loc[len(events), :] = (
+                out_time,
+                (result.Date.iloc[0]),
+                module,
+                version,
+                (result.Date.iloc[0] - out_time),
+                user,
+                host,
+            )
         except IndexError:
-            print(f'No MATCH! {row.to_string()}')
+            print(f"No MATCH! {row}")
         else:
             pass
 
-    events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
-    events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
-    events['Duration'] = pd.to_timedelta(events['Duration'])
+    events["LicOut"] = pd.to_datetime(events["LicOut"], utc=True)
+    events["LicIn"] = pd.to_datetime(events["LicIn"], utc=True)
+    events["Duration"] = pd.to_timedelta(events["Duration"])
 
     # Truncate Host to 4 chars making them CAPS
     events.Host = events.Host.str.slice(0, 4)
     events.Host = events.Host.str.upper()
 
     # Sort by Site (else graph is by login time)
-    events.sort_values(by=['Host'], inplace=True)
+    events.sort_values(by=["Host"], inplace=True)
 
-     # Output CSV of top users by site
-    print('==Top users checkout duration by Site==')
+    # Output CSV of top users by site
+    print("==Top users checkout duration by Site==")
     print('--Output as CSV file "Cresset-siteusers.csv"--')
-    df_agg = events[['User', 'Duration', 'Host']].groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False)
+    df_agg = (
+        events[["User", "Duration", "Host"]]
+        .groupby(["Host", "User"])["Duration"]
+        .agg(["sum"])
+        .sort_values(["sum"], ascending=False)
+    )
     df_agg.columns = df_agg.columns.str.strip()
-    df_agg = df_agg.sort_values(by=['Host', 'sum'], ascending=False)
-    df_agg.to_csv('Cresset-siteusers.csv', encoding='utf8')
+    df_agg = df_agg.sort_values(by=["Host", "sum"], ascending=False)
+    df_agg.to_csv("Cresset-siteusers.csv", encoding="utf8")
 
-    print('==Number of users by site==')
-    print(events.groupby('Host')['User'].nunique().sort_values(ascending=False).to_string())
+    print("==Number of users by site==")
+    print(
+        events.groupby("Host")["User"]
+        .nunique()
+        .sort_values(ascending=False)
+        .to_string()
+    )
 
     # Checkouts per module and duration
-    print('==Sum of Checkouts total duration per module==')
-    print(events.groupby(['Module','Version'])['Duration'].agg(['sum', 'count']).sort_values(['sum'], ascending=False))
+    print("==Sum of Checkouts total duration per module==")
+    print(
+        events.groupby(["Module", "Version"])["Duration"]
+        .agg(["sum", "count"])
+        .sort_values(["sum"], ascending=False)
+    )
 
-    print('==Module and Module version use profile (users of modules)==')
+    print("==Module and Module version use profile (users of modules)==")
     print('--Output as CSV file "Cresset-modules.csv"--')
-    df_modules = events[['User', 'Duration', 'Module', 'Version']].groupby(['Module', 'Version'])['User'].unique()
-    df_modules.to_csv('Cresset-modules.csv', encoding='utf8')
+    df_modules = (
+        events[["User", "Duration", "Module", "Version"]]
+        .groupby(["Module", "Version"])["User"]
+        .unique()
+    )
+    df_modules.to_csv("Cresset-modules.csv", encoding="utf8")
 
     graph(events, df_sub_ref)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         main(sys.argv[1:])
     except ValueError:
