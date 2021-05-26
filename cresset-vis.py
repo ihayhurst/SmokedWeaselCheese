@@ -123,7 +123,7 @@ def simple_user(uid):
     except IndexError:
         # User Not Found, return the original uid
         return uid
-     identity = json.loads(identity)
+    identity = json.loads(identity)
     identity = identity["attributes"]["displayName"][0]
     return identity
 """

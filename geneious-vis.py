@@ -292,7 +292,7 @@ def dt_to_date(dateasdt, FORMAT):
     """Convert datetime object to datestring"""
     datestring = datetime.datetime.strftime(dateasdt, FORMAT)
     return datestring
-"""
+
 
 def date_to_timestamp(datestring, FORMAT):
     """Convert date string to timestamp"""
