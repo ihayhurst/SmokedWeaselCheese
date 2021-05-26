@@ -166,7 +166,7 @@ def simple_user(uid):
     identity = json.loads(identity)
     identity = identity["attributes"]["displayName"][0]
     return identity
-
+"""
 
 def cmd_args(args=None):
     """Prepare commandline arguments return Namespace object of options set"""
