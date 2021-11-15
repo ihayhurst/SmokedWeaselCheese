@@ -13,8 +13,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
+import ADlookup as ad
 
-# import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = "%Y-%m-%dT%H:%M"
 
@@ -37,10 +37,10 @@ def log_parse(original_log, **kwargs):
         data = line.split()
         if len(data) < 4:
             continue
-
         try:
             # Do we have a TIMESTAMP, if we do and it's newer then use it
             if data[2] == "TIMESTAMP":
+                # print(f"got TS@{data[3]}")
                 new_date = datetime.datetime.strptime(data[3], "%m/%d/%Y").date()
                 # If it hasn't changed then value of current_date is OK
                 if new_date == current_date:
@@ -48,6 +48,8 @@ def log_parse(original_log, **kwargs):
                 else:
                     # if it has changed, then that's the new value of current_date
                     current_date = new_date
+                    print(current_date)
+                    # continue
         except IndexError:
             continue
 
@@ -55,6 +57,7 @@ def log_parse(original_log, **kwargs):
 
         if [i for i in grabbag if i in data[2]]:
             record_date = current_date.strftime("%Y-%m-%d")
+
             data = f"{record_date} " + " ".join(re.split(r"\s+|@|\.", line))
             data = data.split(maxsplit=7)
             # Before we deliver a record, make sure the carriage hasn't become a pumpkin
@@ -159,11 +162,10 @@ def graph(events, df_sub_ref, loans):
     fig.tight_layout()
     plt.show()
 
-"""
-# only if you have an ActiveDirectory lookup module
+
 @functools.lru_cache(maxsize=128, typed=False)
 def simple_user(uid):
-    """Take a user logon id and return their name"""
+    """ Take a user logon id and return their name """
     test1 = ad.AD()
     try:
         identity = test1.fetch(f"(sAMAccountName={uid})", "displayName")
@@ -173,7 +175,7 @@ def simple_user(uid):
     identity = json.loads(identity)
     identity = identity["attributes"]["displayName"][0]
     return identity
-"""
+
 
 def cmd_args(args=None):
     """Prepare commandline arguments return Namespace object of options set"""

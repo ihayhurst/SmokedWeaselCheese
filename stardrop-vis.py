@@ -11,8 +11,8 @@ import functools
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
+import ADlookup as ad
 
-# import ADlookup as ad
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = "%Y-%m-%dT%H:%M"
 
@@ -30,6 +30,8 @@ def log_parse(original_log):
     for line in original_log:
         data = re.split("#", line.strip("\n"))
         data[0] = data[0][12:]  # LOG:stuffffUSERNAME username occurs 12 chars
+        if len(data) > 4:  # License_granted now has  version number Remove if present
+            data.pop(2)
 
         if [i for i in grabbag if i in data[1]]:
             yield data
@@ -44,7 +46,7 @@ def readfile_to_dataframe(**kwargs):
         original_log = f.readlines()
         lines_we_keep = list(log_parse(original_log))
         columns_read = ["User", "Action", "Number", "Date"]
-        df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
+        df = pd.DataFrame(lines_we_keep, columns=columns_read)
         df["Date"] = pd.to_datetime(df["Date"])
         df = df.set_index(df["Date"])
     return df
@@ -65,13 +67,13 @@ def graph(events, df_sub_ref):
     )
     ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, "rx")
     fig.autofmt_xdate()
+    fig.tight_layout()
     plt.show()
 
-"""
-# Only if you have an Active Directory lookup
+
 @functools.lru_cache(maxsize=128, typed=False)
 def simple_user(uid):
-    """Take a user logon id and return their name"""
+    """ Take a user logon id and return their name """
     test1 = ad.AD()
     try:
         identity = test1.fetch(f"(sAMAccountName={uid})", "displayName")
@@ -81,7 +83,7 @@ def simple_user(uid):
     identity = json.loads(identity)
     identity = identity["attributes"]["displayName"][0]
     return identity
-"""
+
 
 def cmd_args(args=None):
     """Prepare commandline arguments return Namespace object of options set"""
@@ -223,7 +225,10 @@ def main(args=None):
 
     # Split Checkout and checkin events: record refusals too
     df_sub_out = df_sub[df_sub["Action"] == "License_granted"]
-    df_sub_in = df_sub[df_sub["Action"] == "License_released"]
+    df_sub_in = df_sub[
+        (df_sub["Action"] == "License_released")
+        | (df_sub["Action"] == "Purging_license")
+    ]
     df_sub_ref = df_sub[df_sub["Action"] == "License_refused"]
     # Cumulative license loan tally
     # not needed here yet
@@ -257,6 +262,6 @@ def main(args=None):
 if __name__ == "__main__":
     try:
         main(sys.argv[1:])
-    except ValueError:
-        print("Give me something to do")
+    except ValueError as e:
+        print(f"Give me something to do:{e}")
         sys.exit(1)

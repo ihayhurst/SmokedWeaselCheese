@@ -13,7 +13,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
-import ADlookup as ad
+
+# import ADlookup as ad
 
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = "%Y-%m-%dT%H:%M"
@@ -48,12 +49,14 @@ def log_parse(original_log, **kwargs):
                 else:
                     # if it has changed, then that's the new value of current_date
                     current_date = new_date
+                    print(current_date)
                     continue
         except IndexError:
             continue
 
         if [i for i in grabbag if i in data[2]]:
             record_date = current_date.strftime("%Y-%m-%d")
+
             data = f"{record_date} " + " ".join(re.split(r"\s+|@|\.", line))
             data = data.split(maxsplit=6)
             # Before we deliver a record, make sure the carriage hasn't become a pumpkin
@@ -82,17 +85,8 @@ def readfile_to_dataframe(**kwargs):
     with open(filename, "rt", encoding="utf-8", errors="ignore") as f:
         original_log = f.readlines()
         lines_we_keep = list(log_parse(original_log, **kwargs))
-        columns_read = [
-            "Date",
-            "Time",
-            "Product",
-            "Action",
-            "Module",
-            "User",
-            "Host",
-            "State",
-        ]
-        discard_cols = ["Time", "Product", "Module", "State"]
+        columns_read = ["Date", "Time", "Product", "Action", "Module", "User", "Host"]
+        discard_cols = ["Time", "Product", "Module"]
         df = pd.DataFrame.from_records(lines_we_keep, columns=columns_read)
         df["Date"] = pd.to_datetime(df["Date"] + " " + df["Time"])
         df.drop(list(discard_cols), axis=1, inplace=True)
@@ -150,13 +144,14 @@ def graph(events, df_sub_ref, loans):
     axes[1].grid(which="major", axis="x", alpha=0.5)
     loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True)
     fig.tight_layout()
-    plt.show()
+    # plt.show()
+    plt.savefig("Geneious-date.png")
+    plt.close(fig)
 
-"""
-# Only if you have an Active Directory Lookup module
+
 @functools.lru_cache(maxsize=128, typed=False)
 def simple_user(uid):
-    """Take a user logon id and return their name"""
+    """ Take a user logon id and return their name """
     test1 = ad.AD()
     try:
         identity = test1.fetch(f"(sAMAccountName={uid})", "displayName")
@@ -166,7 +161,7 @@ def simple_user(uid):
     identity = json.loads(identity)
     identity = identity["attributes"]["displayName"][0]
     return identity
-"""
+
 
 def cmd_args(args=None):
     """Prepare commandline arguments return Namespace object of options set"""
@@ -341,6 +336,9 @@ def main(args=None):
     df_sub_out = df_sub[df_sub["Action"] == "OUT:"]
     df_sub_ref = df_sub[df_sub["Action"] == "DENIED:"]
 
+    # print(df_sub_out.tail(30))
+    # print(df_sub_in.tail(20))
+
     # Cumulative license loan tally
     x = df_sub_out.Date.value_counts().sub(df_sub_in.Date.value_counts(), fill_value=0)
     x.iloc[0] = 0
@@ -413,7 +411,8 @@ def main(args=None):
     )
     df_agg.columns = df_agg.columns.str.strip()
     df_agg = df_agg.sort_values(by=["Host", "sum"], ascending=False)
-    df_agg.to_csv("Geneious-siteusers.csv", encoding="utf8")
+    pd.set_option("display.max_colwidth", None)
+    df_agg.to_excel("Geneious-siteusers.xlsx", encoding="utf8")
 
     print("==Number of users by site==")
     print(
