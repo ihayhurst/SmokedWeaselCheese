@@ -248,7 +248,8 @@ def main(args=None):
         df_sub['User'] = df_sub.apply(lambda row: simple_user(row.User), axis=1)
 
     # Unique users in time range
-    print('Unique Users')
+    print(f'==Number of users: {df_sub.User.nunique()} ==')
+    print('==Unique Users==')
     print(df_sub.User.unique())
 
     # Split Checkout and checkin events: record refusals too
@@ -274,13 +275,15 @@ def main(args=None):
             events.loc[len(events), :] = (out_time, (result.Date.iloc[0]),
                                           (result.Date.iloc[0] - out_time), user, host)
         except IndexError:
-            print(f'No MATCH! {row}')
+            print(f'No MATCH! {row.to_string()}')
         else:
             pass
 
     events['LicOut'] = pd.to_datetime(events['LicOut'], utc=True)
     events['LicIn'] = pd.to_datetime(events['LicIn'], utc=True)
     events['Duration'] = pd.to_timedelta(events['Duration'])
+    # Option, print events table
+    # events.to_csv(r'geneious-events.csv', encoding='utf8')
 
     # Truncate Host to 4 chars making them CAPS
     events.Host = events.Host.str.slice(0, 4)
@@ -293,19 +296,20 @@ def main(args=None):
     events.sort_values(by=['Host'], inplace=True)
 
     # Find users that forget to log out
-    lazy_logins = parse_duration('9H')
+    lazy_logins = parse_duration('12H')
     users_overtime = events[events.Duration >= lazy_logins]
-    print('Number of occasions users session goes over 9 Hours')
+    print(f'==Number of occasions users session goes over {lazy_logins} Hours==')
     print(users_overtime[['User', 'Duration']].groupby(['User'])['Duration'].agg(['count']).sort_values(['count'], ascending=False))
 
     # Output CSV of top users by site
+    print('==Top users checkout duration by site== output as "Geneious-siteusers.csv"')
     df_agg = events[['User', 'Duration', 'Host']].groupby(['Host', 'User'])['Duration'].agg(['sum']).sort_values(['sum'], ascending=False)
     df_agg.columns = df_agg.columns.str.strip()
     df_agg = df_agg.sort_values(by=['Host', 'sum'], ascending=False)
-    df_agg.to_csv('siteusers.csv', encoding='utf8')
+    df_agg.to_csv('Geneious-siteusers.csv', encoding='utf8')
 
-    print('Number of users by site')
-    print(events.groupby('Host')['User'].nunique().sort_values(ascending=False))
+    print('==Number of users by site==')
+    print(events.groupby('Host')['User'].nunique().sort_values(ascending=False).to_string())
 
     graph(events, df_sub_ref, loans)
 
