@@ -110,13 +110,14 @@ def graph(events, df_sub_ref):
     # axes[1].grid(which='major', axis='x', alpha=0.5)
     # loans.plot(ax=axes[1], color=loan_color, linewidth=1, grid=True)
     fig.tight_layout()
-    plt.show()
+    # plt.show()
+    plt.savefig("Cresset-date.png")
+    plt.close(fig)
 
-"""
-# Only with Adtive Directory lookup module
+
 @functools.lru_cache(maxsize=128, typed=False)
 def simple_user(uid):
-    """Take a user logon id and return their name"""
+    """ Take a user logon id and return their name """
     test1 = ad.AD()
     try:
         identity = test1.fetch(f"(sAMAccountName={uid})", "displayName")
@@ -126,7 +127,7 @@ def simple_user(uid):
     identity = json.loads(identity)
     identity = identity["attributes"]["displayName"][0]
     return identity
-"""
+
 
 def cmd_args(args=None):
     """Prepare commandline arguments return Namespace object of options set"""
@@ -280,11 +281,11 @@ def main(args=None):
 
     # filter for specific users
     """
-    user_set = ['jsmith', 
+    user_set = ['fbloggs',
+                'jblow',
+                'jbloggs',
                 'jdoe',
-                'fblogs',
-                'mreman',
-                'djones']
+                'mreman']
     df_sub = df_sub[df_sub['User'].isin(user_set)]
     """
 
@@ -393,13 +394,14 @@ def main(args=None):
     )
 
     print("==Module and Module version use profile (users of modules)==")
-    print('--Output as CSV file "Cresset-modules.csv"--')
+    print('--Output as Excel file "Cresset-modules.xlsx"--')
     df_modules = (
         events[["User", "Duration", "Module", "Version"]]
         .groupby(["Module", "Version"])["User"]
         .unique()
     )
-    df_modules.to_csv("Cresset-modules.csv", encoding="utf8")
+    pd.set_option("display.max_colwidth", None)
+    df_modules.to_excel("Cresset-modules.xlsx", encoding="utf8")
 
     graph(events, df_sub_ref)
 
