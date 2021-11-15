@@ -13,7 +13,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
 import seaborn as sns
-import ADlookup as ad
+
+# import ADlookup as ad
 
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = "%Y-%m-%dT%H:%M"
@@ -409,6 +410,6 @@ def main(args=None):
 if __name__ == "__main__":
     try:
         main(sys.argv[1:])
-    except ValueError:
-        print("Give me something to do")
+    except ValueError as e:
+        print(f"Give me something to do. {e}")
         sys.exit(1)

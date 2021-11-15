@@ -428,6 +428,6 @@ def main(args=None):
 if __name__ == "__main__":
     try:
         main(sys.argv[1:])
-    except ValueError:
-        print("Give me something to do")
+    except ValueError as e:
+        print(f"Give me something to do. {e}")
         sys.exit(1)

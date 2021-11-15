@@ -11,7 +11,7 @@ import functools
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
-import ADlookup as ad
+#import ADlookup as ad
 
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
 DT_FORMAT = "%Y-%m-%dT%H:%M"
@@ -263,5 +263,5 @@ if __name__ == "__main__":
     try:
         main(sys.argv[1:])
     except ValueError as e:
-        print(f"Give me something to do:{e}")
+        print(f"Give me something to do. {e}")
         sys.exit(1)
