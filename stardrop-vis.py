@@ -11,6 +11,7 @@ import functools
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import date2num
+import seaborn as sns
 #import ADlookup as ad
 
 # Set ISO 8601 Datetime format e.g. 2020-12-22T14:30
@@ -30,7 +31,7 @@ def log_parse(original_log):
     for line in original_log:
         data = re.split("#", line.strip("\n"))
         data[0] = data[0][12:]  # LOG:stuffffUSERNAME username occurs 12 chars
-        if len(data) > 4:  # License_granted now has  version number Remove if present
+        if len(data) > 4: # License_granted now has  version number Remove if present
             data.pop(2)
 
         if [i for i in grabbag if i in data[1]]:
@@ -53,22 +54,41 @@ def readfile_to_dataframe(**kwargs):
 
 
 def graph(events, df_sub_ref):
+    color_labels = events.Number.unique()
+    rgb_values = sns.color_palette("bright", len(color_labels))
+    color_map = dict(zip(color_labels, rgb_values))
+    labels = events["User"]
     fig, ax = plt.subplots(figsize=(16, 10))
+    fig.autofmt_xdate()
+    fig.tight_layout()
     ax.tick_params(axis="both", which="major", labelsize=6)
     ax.tick_params(axis="both", which="minor", labelsize=6)
-    labels = events["User"]
-    ax = ax.xaxis_date()
-    ax = plt.hlines(
+    ax.xaxis_date()
+    patches = [
+        plt.plot(
+            [],
+            [],
+            marker="o",
+            ms=10,
+            ls="",
+            mec=None,
+            color=rgb_values[i],
+            label="{:s}".format(color_labels[i]),
+        )[0]
+        for i in range(len(color_labels))
+    ]
+    ax.legend(handles=patches, bbox_to_anchor=(0, 1), loc="upper left")
+    ax.hlines(
         labels,
         date2num(events.LicOut),
         date2num(events.LicIn),
         linewidth=10,
-        color="blue",
+        color=events.Number.map(color_map),
+        alpha=0.8,
     )
-    ax = plt.plot(date2num(df_sub_ref.Date), df_sub_ref.User, "rx")
-    fig.autofmt_xdate()
-    fig.tight_layout()
-    plt.show()
+    ax.plot(date2num(df_sub_ref.Date), df_sub_ref.User, "rx")
+    plt.savefig('stardrop-date.png')
+    plt.close(fig)
 
 
 @functools.lru_cache(maxsize=128, typed=False)
@@ -234,16 +254,23 @@ def main(args=None):
     # not needed here yet
 
     # Events table: For every checkout get checkin; calculate the loan duration
-    events = pd.DataFrame(columns=["LicOut", "LicIn", "Duration", "User"])
-    for index, row in df_sub_out.iterrows():
-        user = row.User
-        out_time = row.Date
+    events = pd.DataFrame(columns=["LicOut", "LicIn", "Number", "Duration", "User"])
+    for row in df_sub_out.itertuples():
+        index = getattr(row, "Index")
+        user = getattr(row, "User")
+        out_time = getattr(row, "Date")
+        number = getattr(row, "Number")
         try:
-            key = (df_sub_in.User == user) & (df_sub_in.index >= index)
+            key = (
+            (df_sub_in.User == user)
+            & (df_sub_in.index >= index)
+            &(df_sub_in.Number == number)
+            )
             result = df_sub_in.loc[key]
             events.loc[len(events), :] = (
                 out_time,
                 (result.Date.iloc[0]),
+                number,
                 (result.Date.iloc[0] - out_time),
                 user,
             )
@@ -255,7 +282,9 @@ def main(args=None):
     events["LicOut"] = pd.to_datetime(events["LicOut"], utc=True)
     events["LicIn"] = pd.to_datetime(events["LicIn"], utc=True)
     events["Duration"] = pd.to_timedelta(events["Duration"])
-    # print(df_sub_ref.query('User == "Williams Simon CHST" or User == "Germain Nicolas CHST"' ))
+    # print(df_sub_ref.query('User == "Bloggs Fred SITE" or User == "Blow Joe SITE"' ))
+    # Assign names to license features
+    events["Number"].replace({"514": "wibble", "520": "munge", "544": "pharg", "546": "mulch"}, inplace=True)
     graph(events, df_sub_ref)
 
 
@@ -263,5 +292,5 @@ if __name__ == "__main__":
     try:
         main(sys.argv[1:])
     except ValueError as e:
-        print(f"Give me something to do. {e}")
+        print(f"Give me something to do: {e}")
         sys.exit(1)
